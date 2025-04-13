@@ -1,17 +1,45 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaNeon } from "@neondatabase/serverless";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+// Declare a global variable to hold the Prisma Client instance
+declare global {
+  // Allow global `var` declarations
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
+}
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    adapter: process.env.NODE_ENV === "production" ? PrismaNeon() : undefined,
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+const connectionString = `${process.env.DATABASE_URL}`;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is not set");
+}
+
+// Function to create the Prisma Client instance
+const createPrismaClient = () => {
+  // Check if we're in an environment that requires the Neon adapter
+  // Middleware always runs on the edge. Vercel Edge Functions also need it.
+  // Node.js environments (like standard API routes, getServerSideProps) can also use it,
+  // especially in serverless functions where connection pooling is beneficial.
+  // We'll use Neon for all environments for consistency here,
+  // leveraging its serverless connection pooling.
+
+  const adapter = new PrismaNeon({ connectionString });
+
+  return new PrismaClient({
+    adapter,
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
   });
+};
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Instantiate PrismaClient, reusing the instance in development or across serverless invocations
+export const db = globalThis.prisma ?? createPrismaClient();
 
-export default prisma;
+// Prevent multiple instances in development HMR
+if (process.env.NODE_ENV !== "production") {
+  globalThis.prisma = db;
+}
+
+export default db;

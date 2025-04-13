@@ -9,8 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/lib/auth";
-import { LogOut, User } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 interface UserAvatarProps {
   user: {

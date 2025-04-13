@@ -1,32 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getAuth } from "@/lib/auth";
+import { useSession } from "next-auth/react";
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<{
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, status } = useSession();
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const session = await getAuth();
-        setUser(session?.user || null);
-      } catch (error) {
-        console.error("Failed to fetch user:", error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchUser();
-  }, []);
-
-  return { user, isLoading };
+  return { 
+    user: session?.user || null, 
+    isLoading: status === "loading" 
+  };
 }
