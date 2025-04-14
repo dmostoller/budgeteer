@@ -22,6 +22,7 @@ import {
   Receipt,
   CalendarIcon,
   CreditCard,
+  SparkleIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { NavUser } from "@/components/auth/nav-user";
@@ -42,6 +43,7 @@ const navItems = [
     icon: CreditCard,
   },
   { href: "/dashboard/calendar", label: "Calendar", icon: CalendarIcon },
+  { href: "/dashboard/advisor", label: "AI Advisor", icon: SparkleIcon },
 ];
 
 export default async function DashboardLayout({
