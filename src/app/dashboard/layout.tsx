@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { cookies } from "next/headers"; // Import cookies
 import { auth } from "@/lib/auth";
-import { UserAvatar } from "@/components/auth/user-avatar";
 import { ModeToggle } from "@/components/mode-toggle";
 // Import the specific sidebar components including Provider and Inset
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -23,6 +23,8 @@ import {
   CalendarIcon,
   CreditCard,
 } from "lucide-react";
+import Image from "next/image";
+import { NavUser } from "@/components/auth/nav-user";
 
 export const metadata: Metadata = {
   title: "Dashboard | Budgeteer",
@@ -63,7 +65,12 @@ export default async function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center">
-            <DollarSign className="h-6 w-6" />
+            <Image
+              src="/lines-logo.png"
+              width={25}
+              height={25}
+              alt="Budgeteer Logo"
+            />
             <span className="ml-2 text-lg font-bold">Budgeteer</span>
           </div>
         </SidebarHeader>
@@ -81,6 +88,9 @@ export default async function DashboardLayout({
             ))}
           </SidebarMenu>
         </SidebarContent>
+        <SidebarFooter>
+          <NavUser />
+        </SidebarFooter>
       </Sidebar>
 
       {/* Wrap the main content area with SidebarInset */}
@@ -93,7 +103,6 @@ export default async function DashboardLayout({
             {/* Use shrink-0 */}
             <div className="ml-auto flex items-center gap-2">
               <ModeToggle />
-              {session.user && <UserAvatar user={session.user} />}
             </div>
           </header>
           <main className="flex flex-1 flex-col gap-4 p-4 lg:p-6">

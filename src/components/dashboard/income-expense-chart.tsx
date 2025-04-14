@@ -79,13 +79,13 @@ export function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
               <Bar
                 dataKey="income"
                 name="Income"
-                fill="#4ade80"
+                fill="hsl(115deg 54% 76%)" // Catppuccin Green
                 radius={[4, 4, 0, 0]}
               />
               <Bar
                 dataKey="expenses"
                 name="Expenses"
-                fill="#ef4444"
+                fill="hsl(343deg 81% 75%)" // Catppuccin Red
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>

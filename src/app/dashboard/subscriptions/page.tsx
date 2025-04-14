@@ -9,20 +9,27 @@ export const dynamic = "force-dynamic";
 
 export default async function SubscriptionsPage() {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     return null;
   }
-  
-  const subscriptions = await prisma.subscription.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    orderBy: {
-      nextPaymentDate: "asc",
-    },
-  });
-  
+
+  const subscriptions = await prisma.subscription
+    .findMany({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        nextPaymentDate: "asc",
+      },
+    })
+    .then((subscriptions) =>
+      subscriptions.map((sub) => ({
+        ...sub,
+        amount: Number(sub.amount),
+      })),
+    );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

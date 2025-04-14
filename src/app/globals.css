@@ -45,72 +45,83 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  /* Light theme - using Catppuccin colors with light mode adjustments */
+  --background: hsl(240deg 21% 97%); /* Light version of Base */
+  --foreground: hsl(240deg 21% 15%); /* Base */
+  --card: hsl(240deg 21% 95%); /* Light version of Mantle */
+  --card-foreground: hsl(240deg 21% 15%); /* Base */
+  --popover: hsl(240deg 21% 95%); /* Light version of Mantle */
+  --popover-foreground: hsl(240deg 21% 15%); /* Base */
+  --primary: hsl(115deg 54% 76%); /* Green */
+  --primary-foreground: hsl(240deg 21% 15%); /* Base */
+  --secondary: hsl(199deg 76% 69%); /* Sapphire */
+  --secondary-foreground: hsl(240deg 21% 15%); /* Base */
+  --muted: hsl(228deg 17% 90%); /* Light version of Overlay 2 */
+  --muted-foreground: hsl(231deg 11% 47%); /* Overlay 0 */
+  --accent: hsl(232deg 97% 85%); /* Lavender */
+  --accent-foreground: hsl(240deg 21% 15%); /* Base */
+  --destructive: hsl(343deg 81% 75%); /* Red */
+  --border: hsl(233deg 12% 75%); /* Light version of Surface 2 */
+  --input: hsl(233deg 12% 75%); /* Light version of Surface 2 */
+  --ring: hsl(199deg 76% 69%); /* Sapphire */
+  
+  /* Chart colors using Catppuccin palette */
+  --chart-1: hsl(115deg 54% 76%); /* Green */
+  --chart-2: hsl(199deg 76% 69%); /* Sapphire */
+  --chart-3: hsl(232deg 97% 85%); /* Lavender */
+  --chart-4: hsl(170deg 57% 73%); /* Teal */
+  --chart-5: hsl(189deg 71% 73%); /* Sky */
+
+  /* Sidebar colors */
+  --sidebar: hsl(240deg 21% 97%); /* Light version of Base */
+  --sidebar-foreground: hsl(240deg 21% 15%); /* Base */
+  --sidebar-primary: hsl(115deg 54% 76%); /* Green */
+  --sidebar-primary-foreground: hsl(240deg 21% 15%); /* Base */
+  --sidebar-accent: hsl(232deg 97% 85%); /* Lavender */
+  --sidebar-accent-foreground: hsl(240deg 21% 15%); /* Base */
+  --sidebar-border: hsl(233deg 12% 75%); /* Light version of Surface 2 */
+  --sidebar-ring: hsl(199deg 76% 69%); /* Sapphire */
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  /* Dark theme using Catppuccin Mocha colors */
+  --background: hsl(240deg 21% 15%); /* Base */
+  --foreground: hsl(226deg 64% 88%); /* Text */
+  --card: hsl(240deg 21% 12%); /* Mantle */
+  --card-foreground: hsl(226deg 64% 88%); /* Text */
+  --popover: hsl(240deg 21% 12%); /* Mantle */
+  --popover-foreground: hsl(226deg 64% 88%); /* Text */
+  --primary: hsl(115deg 54% 76%); /* Green */
+  --primary-foreground: hsl(240deg 21% 15%); /* Base */
+  --secondary: hsl(199deg 76% 69%); /* Sapphire */
+  --secondary-foreground: hsl(226deg 64% 88%); /* Text */
+  --muted: hsl(237deg 16% 23%); /* Surface 0 */
+  --muted-foreground: hsl(228deg 24% 72%); /* Subtext 0 */
+  --accent: hsl(232deg 97% 85%); /* Lavender */
+  --accent-foreground: hsl(240deg 21% 15%); /* Base */
+  --destructive: hsl(343deg 81% 75%); /* Red */
+  --border: hsl(233deg 12% 39%); /* Surface 2 */
+  --input: hsl(234deg 13% 31%); /* Surface 1 */
+  --ring: hsl(199deg 76% 69%); /* Sapphire */
+
+  /* Chart colors using Catppuccin palette */
+  --chart-1: hsl(115deg 54% 76%); /* Green */
+  --chart-2: hsl(199deg 76% 69%); /* Sapphire */
+  --chart-3: hsl(232deg 97% 85%); /* Lavender */
+  --chart-4: hsl(170deg 57% 73%); /* Teal */
+  --chart-5: hsl(189deg 71% 73%); /* Sky */
+
+  /* Sidebar colors */
+  --sidebar: hsl(240deg 21% 12%); /* Mantle */
+  --sidebar-foreground: hsl(226deg 64% 88%); /* Text */
+  --sidebar-primary: hsl(115deg 54% 76%); /* Green */
+  --sidebar-primary-foreground: hsl(240deg 21% 15%); /* Base */
+  --sidebar-accent: hsl(232deg 97% 85%); /* Lavender */
+  --sidebar-accent-foreground: hsl(240deg 21% 15%); /* Base */
+  --sidebar-border: hsl(233deg 12% 39%); /* Surface 2 */
+  --sidebar-ring: hsl(199deg 76% 69%); /* Sapphire */
 }
+
 
 @layer base {
   * {

@@ -1,7 +1,13 @@
 "use client";
 
-import { DollarSign, ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign, ArrowDownRight, TrendingUp } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface SummaryStatsProps {
   totalIncome: number;
@@ -10,7 +16,12 @@ interface SummaryStatsProps {
   monthName: string;
 }
 
-export function SummaryStats({ totalIncome, totalExpenses, netBalance, monthName }: SummaryStatsProps) {
+export function SummaryStats({
+  totalIncome,
+  totalExpenses,
+  netBalance,
+  monthName,
+}: SummaryStatsProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -23,39 +34,49 @@ export function SummaryStats({ totalIncome, totalExpenses, netBalance, monthName
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-          <DollarSign className="h-4 w-4 text-green-500" />
+          <DollarSign className="h-4 w-4 text-primary" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-500">{formatCurrency(totalIncome)}</div>
+          <div className="text-2xl font-bold text-primary">
+            {formatCurrency(totalIncome)}
+          </div>
           <CardDescription className="pt-1">{monthName} Income</CardDescription>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-          <ArrowDownRight className="h-4 w-4 text-red-500" />
+          <ArrowDownRight className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-500">{formatCurrency(totalExpenses)}</div>
-          <CardDescription className="pt-1">{monthName} Expenses</CardDescription>
+          <div className="text-2xl font-bold text-destructive">
+            {formatCurrency(totalExpenses)}
+          </div>
+          <CardDescription className="pt-1">
+            {monthName} Expenses
+          </CardDescription>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
           {netBalance >= 0 ? (
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <TrendingUp className="h-4 w-4 text-primary" />
           ) : (
-            <TrendingUp className="h-4 w-4 text-red-500" />
+            <TrendingUp className="h-4 w-4 text-destructive" />
           )}
         </CardHeader>
         <CardContent>
-          <div className={`text-2xl font-bold ${netBalance >= 0 ? "text-green-500" : "text-red-500"}`}>
+          <div
+            className={`text-2xl font-bold ${netBalance >= 0 ? "text-primary" : "text-destructive"}`}
+          >
             {formatCurrency(netBalance)}
           </div>
-          <CardDescription className="pt-1">Savings for {monthName}</CardDescription>
+          <CardDescription className="pt-1">
+            Savings for {monthName}
+          </CardDescription>
         </CardContent>
       </Card>
     </div>
