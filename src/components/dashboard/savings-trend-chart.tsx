@@ -10,14 +10,14 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  ReferenceLine,
 } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, subMonths, format } from "date-fns";
@@ -26,17 +26,15 @@ type MonthlyData = {
   month: string;
   income: number;
   expenses: number;
+  savings?: number;
 };
 
-interface IncomeExpenseChartProps {
+interface SavingsTrendChartProps {
   data: MonthlyData[];
   className?: string;
 }
 
-export function IncomeExpenseChart({
-  data,
-  className,
-}: IncomeExpenseChartProps) {
+export function SavingsTrendChart({ data, className }: SavingsTrendChartProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [visibleData, setVisibleData] = useState<MonthlyData[]>([]);
 
@@ -49,6 +47,7 @@ export function IncomeExpenseChart({
       const monthNum = new Date(`${monthName} 1, ${year}`).getMonth();
       return {
         ...item,
+        savings: item.income - item.expenses,
         date: new Date(parseInt(year), monthNum, 1),
       };
     });
@@ -86,6 +85,7 @@ export function IncomeExpenseChart({
           month: foundData.month,
           income: foundData.income,
           expenses: foundData.expenses,
+          savings: foundData.savings,
         };
       } else {
         // Create placeholder data for months that don't exist in the original data
@@ -93,6 +93,7 @@ export function IncomeExpenseChart({
           month: format(month, "MMM yyyy"),
           income: 0,
           expenses: 0,
+          savings: 0,
         };
       }
     });
@@ -127,22 +128,16 @@ export function IncomeExpenseChart({
     label,
   }: {
     active?: boolean;
-    payload?: {
-      value: number;
-      name: string;
-      color: string;
-    }[];
+    payload?: { value: number }[];
     label?: string;
   }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border rounded-md p-3 shadow-md">
           <p className="font-medium mb-1">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {currencyFormatter(entry.value)}
-            </p>
-          ))}
+          <p style={{ color: "hsl(189deg 70% 80%)" }}>
+            Savings: {currencyFormatter(payload[0].value)}
+          </p>
         </div>
       );
     }
@@ -154,10 +149,8 @@ export function IncomeExpenseChart({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Income vs. Expenses</CardTitle>
-            <CardDescription>
-              Comparison of monthly income and expenses
-            </CardDescription>
+            <CardTitle>Savings Trend</CardTitle>
+            <CardDescription>Monthly savings over time</CardDescription>
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -185,28 +178,23 @@ export function IncomeExpenseChart({
       <CardContent>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
+            <AreaChart
               data={visibleData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
               <XAxis dataKey="month" />
               <YAxis tickFormatter={currencyFormatter} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar
-                dataKey="income"
-                name="Income"
-                fill="hsl(115deg 54% 76%)" // Catppuccin Green
-                radius={[4, 4, 0, 0]}
+              <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
+              <Area
+                type="monotone"
+                dataKey="savings"
+                stroke="hsl(189deg 70% 80%)"
+                fill="hsl(189deg 70% 80% / 0.2)"
+                strokeWidth={2}
               />
-              <Bar
-                dataKey="expenses"
-                name="Expenses"
-                fill="hsl(343deg 81% 75%)" // Catppuccin Red
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

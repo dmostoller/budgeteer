@@ -7,7 +7,18 @@ const expenseSchema = z.object({
   description: z.string().min(2),
   amount: z.number().positive(),
   date: z.coerce.date(),
-  category: z.enum(["HOUSING", "FOOD", "TRANSPORTATION", "UTILITIES", "ENTERTAINMENT", "SUBSCRIPTIONS", "HEALTHCARE", "PERSONAL_CARE", "DEBT_PAYMENT", "OTHER"]),
+  category: z.enum([
+    "HOUSING",
+    "FOOD",
+    "TRANSPORTATION",
+    "UTILITIES",
+    "ENTERTAINMENT",
+    "SUBSCRIPTIONS",
+    "HEALTHCARE",
+    "PERSONAL_CARE",
+    "DEBT_PAYMENT",
+    "OTHER",
+  ]),
   isRecurring: z.boolean().default(false),
   recurrencePeriod: z
     .enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"])
@@ -15,7 +26,10 @@ const expenseSchema = z.object({
     .nullable(),
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -40,12 +54,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     console.error("Error fetching expense:", error);
     return NextResponse.json(
       { error: "Failed to fetch expense" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -85,12 +102,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     console.error("Error updating expense:", error);
     return NextResponse.json(
       { error: "Failed to update expense" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -123,7 +143,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     console.error("Error deleting expense:", error);
     return NextResponse.json(
       { error: "Failed to delete expense" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

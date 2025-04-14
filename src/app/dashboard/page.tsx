@@ -1,5 +1,7 @@
 import { SummaryStats } from "@/components/dashboard/summary-stats";
 import { IncomeExpenseChart } from "@/components/dashboard/income-expense-chart";
+import { ExpenseDistributionChart } from "@/components/dashboard/expense-distribution-chart";
+import { SavingsTrendChart } from "@/components/dashboard/savings-trend-chart";
 import { UpcomingPayments } from "@/components/dashboard/upcoming-payments";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -83,10 +85,13 @@ async function fetchDashboardData(userId: string) {
       },
     });
 
+    const monthIncomeAmount = Number(monthIncome._sum.amount || 0);
+    const monthExpensesAmount = Number(monthExpenses._sum.amount || 0);
     monthlyData.push({
       month: monthName,
-      income: Number(monthIncome._sum.amount || 0),
-      expenses: Number(monthExpenses._sum.amount || 0),
+      income: monthIncomeAmount,
+      expenses: monthExpensesAmount,
+      savings: monthIncomeAmount - monthExpensesAmount,
     });
   }
 
@@ -152,6 +157,71 @@ async function fetchDashboardData(userId: string) {
     })),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  // Get expense distribution by category for current month
+  const expenseCategories = await prisma.expense.groupBy({
+    by: ["category"],
+    where: {
+      userId,
+      date: {
+        gte: monthStart,
+        lte: monthEnd,
+      },
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  // Get subscription expenses by category
+  const subscriptionsByCategory = await prisma.subscription.groupBy({
+    by: ["category"],
+    where: {
+      userId,
+      nextPaymentDate: {
+        gte: monthStart,
+        lte: monthEnd,
+      },
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  // Format expense distribution data
+  const expenseDistribution = [
+    ...expenseCategories.map((category) => ({
+      category: category.category,
+      value: Number(category._sum.amount || 0),
+    })),
+    ...subscriptionsByCategory.map((category) => ({
+      category: category.category,
+      value: Number(category._sum.amount || 0),
+    })),
+  ];
+
+  // Combine categories and sum values
+  const expenseDistributionCombined = expenseDistribution.reduce(
+    (acc, item) => {
+      const existingCategory = acc.find((c) => c.category === item.category);
+      if (existingCategory) {
+        existingCategory.value += item.value;
+      } else {
+        acc.push(item);
+      }
+      return acc;
+    },
+    [] as { category: string; value: number }[],
+  );
+
+  // Calculate percentage for each category
+  const totalExpenseAmount = Number(expenseTotal._sum.amount || 0);
+  const expenseDistributionWithPercent = expenseDistributionCombined.map(
+    (item) => ({
+      ...item,
+      percent: totalExpenseAmount > 0 ? item.value / totalExpenseAmount : 0,
+    }),
+  );
+
   return {
     currentMonth: {
       name: format(today, "MMMM yyyy"),
@@ -163,6 +233,7 @@ async function fetchDashboardData(userId: string) {
     },
     monthlyData,
     upcomingPayments,
+    expenseDistribution: expenseDistributionWithPercent,
   };
 }
 
@@ -202,10 +273,17 @@ export default async function DashboardPage() {
         monthName={dashboardData.currentMonth.name}
       />
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <IncomeExpenseChart data={dashboardData.monthlyData} />
-        <UpcomingPayments payments={dashboardData.upcomingPayments} />
+      {/* First row of charts - Income/Expense Bar Chart and Upcoming Payments */}
+
+      {/* Second row of charts - Expense Distribution and Savings Trend */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <div className="col-span-full">
+          <IncomeExpenseChart data={dashboardData.monthlyData} />
+        </div>
+        <ExpenseDistributionChart data={dashboardData.expenseDistribution} />
+        <SavingsTrendChart data={dashboardData.monthlyData} />
       </div>
+      <UpcomingPayments payments={dashboardData.upcomingPayments} />
     </div>
   );
 }

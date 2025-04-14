@@ -64,17 +64,17 @@ export default async function DashboardLayout({
       {/* The actual Sidebar component */}
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center">
+          <div className="flex items-center pl-3">
             <Image
-              src="/lines-logo.png"
-              width={25}
-              height={25}
+              src="/mascot.png"
+              width={75}
+              height={75}
               alt="Budgeteer Logo"
             />
-            <span className="ml-2 text-lg font-bold">Budgeteer</span>
+            <span className="ml-2 text-xl font-bold">Budgeteer</span>
           </div>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="pt-4">
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
@@ -89,25 +89,21 @@ export default async function DashboardLayout({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <NavUser />
+          <div className="flex items-center justify-between">
+            <NavUser />
+            <ModeToggle />
+          </div>
         </SidebarFooter>
       </Sidebar>
 
       {/* Wrap the main content area with SidebarInset */}
       <SidebarInset>
         <div className="flex flex-col min-h-screen">
-          {" "}
-          {/* Ensure flex container takes height */}
-          <header className="flex h-14 shrink-0 items-center gap-4 border-b px-4 lg:px-6">
-            {" "}
-            {/* Use shrink-0 */}
+          {/* <header className="flex h-14 shrink-0 items-center gap-4 border-b px-4 lg:px-6">
             <div className="ml-auto flex items-center gap-2">
-              <ModeToggle />
             </div>
-          </header>
+          </header> */}
           <main className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
-            {" "}
-            {/* Use flex-1 */}
             {children}
           </main>
         </div>

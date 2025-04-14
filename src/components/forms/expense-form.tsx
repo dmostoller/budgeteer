@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -39,13 +39,15 @@ import { ExpenseCategory, RecurrencePeriod } from "@prisma/client";
 import { toast } from "sonner";
 
 const formSchema = z.object({
-  description: z.string().min(2, { message: "Description must be at least 2 characters" }),
+  description: z
+    .string()
+    .min(2, { message: "Description must be at least 2 characters" }),
   amount: z.coerce
     .number()
     .positive({ message: "Amount must be a positive number" }),
   date: z.date(),
   category: z.nativeEnum(ExpenseCategory),
-  isRecurring: z.boolean().default(false),
+  isRecurring: z.boolean(),
   recurrencePeriod: z.nativeEnum(RecurrencePeriod).optional(),
 });
 
@@ -158,7 +160,7 @@ export function ExpenseForm({ defaultValues, expenseId }: ExpenseFormProps) {
                         variant={"outline"}
                         className={cn(
                           "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
@@ -201,10 +203,7 @@ export function ExpenseForm({ defaultValues, expenseId }: ExpenseFormProps) {
                   </FormControl>
                   <SelectContent>
                     {EXPENSE_CATEGORIES.map((category) => (
-                      <SelectItem
-                        key={category.value}
-                        value={category.value}
-                      >
+                      <SelectItem key={category.value} value={category.value}>
                         {category.label}
                       </SelectItem>
                     ))}
@@ -269,7 +268,11 @@ export function ExpenseForm({ defaultValues, expenseId }: ExpenseFormProps) {
         )}
 
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : isEditing ? "Update Expense" : "Add Expense"}
+          {isSubmitting
+            ? "Saving..."
+            : isEditing
+              ? "Update Expense"
+              : "Add Expense"}
         </Button>
       </form>
     </Form>
