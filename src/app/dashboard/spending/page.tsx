@@ -9,11 +9,11 @@ export const dynamic = "force-dynamic";
 
 export default async function SpendingPage() {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     return null;
   }
-  
+
   const expenses = await prisma.expense.findMany({
     where: {
       userId: session.user.id,
@@ -22,7 +22,13 @@ export default async function SpendingPage() {
       date: "desc",
     },
   });
-  
+
+  // Convert Decimal to number for client component
+  const serializedExpenses = expenses.map((expense) => ({
+    ...expense,
+    amount: expense.amount.toNumber(),
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -33,7 +39,7 @@ export default async function SpendingPage() {
           </Button>
         </Link>
       </div>
-      <ExpenseTable data={expenses} />
+      <ExpenseTable data={serializedExpenses} />
     </div>
   );
 }

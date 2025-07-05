@@ -20,12 +20,9 @@ export default async function HomePage() {
           <span className="ml-2 text-xl font-bold">Budgeteer</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link
-            className="text-sm font-medium hover:underline underline-offset-4"
-            href="/login"
-          >
-            Log In
-          </Link>
+          <Button size="sm">
+            <Link href="/login">Log In</Link>
+          </Button>
         </nav>
       </header>
       <main className="flex-1">
