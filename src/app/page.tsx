@@ -26,7 +26,12 @@ export default async function HomePage() {
           <span className="ml-2 text-xl font-bold">Budgeteer</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Button variant="ghost" size="sm" asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="hover:text-foreground"
+          >
             {/* Use asChild to make the Button render the Link */}
             <Link href="/login">Log In</Link>
           </Button>
@@ -115,7 +120,7 @@ export default async function HomePage() {
         </section>
       </main>
       <footer className="border-t">
-        <div className="container flex flex-col gap-2 py-6 md:flex-row md:items-center md:justify-between md:py-8">
+        <div className="container flex flex-col gap-2 py-6 md:flex-row md:items-center md:justify-between md:py-8 px-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <p className="text-xs text-muted-foreground">
               &copy; {new Date().getFullYear()} Budgeteer. All rights reserved.
