@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -8,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   AreaChart,
   Area,
@@ -19,8 +17,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { addMonths, subMonths, format } from "date-fns";
 
 type MonthlyData = {
   month: string;
@@ -35,81 +31,11 @@ interface SavingsTrendChartProps {
 }
 
 export function SavingsTrendChart({ data, className }: SavingsTrendChartProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [visibleData, setVisibleData] = useState<MonthlyData[]>([]);
-
-  // Calculate which 5 months to show (current month in the middle, 2 before, 2 after)
-  useEffect(() => {
-    // Process data to include date objects for easier manipulation
-    const processedData = data.map((item) => {
-      const [monthName, year] = item.month.split(" ");
-      // Convert month name to month number (0-indexed)
-      const monthNum = new Date(`${monthName} 1, ${year}`).getMonth();
-      return {
-        ...item,
-        savings: item.income - item.expenses,
-        date: new Date(parseInt(year), monthNum, 1),
-      };
-    });
-
-    // Find 2 months before and 2 months after current date
-    const currentMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1,
-    );
-
-    const twoMonthsBefore = subMonths(currentMonth, 2);
-    const oneMonthBefore = subMonths(currentMonth, 1);
-    const oneMonthAfter = addMonths(currentMonth, 1);
-    const twoMonthsAfter = addMonths(currentMonth, 2);
-
-    const monthsToShow = [
-      twoMonthsBefore,
-      oneMonthBefore,
-      currentMonth,
-      oneMonthAfter,
-      twoMonthsAfter,
-    ];
-
-    // Filter data for these months, or create placeholder data if missing
-    const filteredData = monthsToShow.map((month) => {
-      const foundData = processedData.find(
-        (item) =>
-          item.date.getMonth() === month.getMonth() &&
-          item.date.getFullYear() === month.getFullYear(),
-      );
-
-      if (foundData) {
-        return {
-          month: foundData.month,
-          income: foundData.income,
-          expenses: foundData.expenses,
-          savings: foundData.savings,
-        };
-      } else {
-        // Create placeholder data for months that don't exist in the original data
-        return {
-          month: format(month, "MMM yyyy"),
-          income: 0,
-          expenses: 0,
-          savings: 0,
-        };
-      }
-    });
-
-    setVisibleData(filteredData);
-  }, [data, currentDate]);
-
-  // Navigate backward 1 month
-  const handlePrevMonth = () => {
-    setCurrentDate((prevDate) => subMonths(prevDate, 1));
-  };
-
-  // Navigate forward 1 month
-  const handleNextMonth = () => {
-    setCurrentDate((prevDate) => addMonths(prevDate, 1));
-  };
+  // Ensure all data has savings calculated
+  const dataWithSavings = data.map((item) => ({
+    ...item,
+    savings: item.savings ?? item.income - item.expenses,
+  }));
 
   // Currency formatter for tooltip
   const currencyFormatter = (value: number) => {
@@ -147,39 +73,14 @@ export function SavingsTrendChart({ data, className }: SavingsTrendChartProps) {
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Savings Trend</CardTitle>
-            <CardDescription>Monthly savings over time</CardDescription>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePrevMonth}
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium">
-              {format(currentDate, "MMMM yyyy")}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNextMonth}
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <CardTitle>Savings Trend</CardTitle>
+        <CardDescription>Monthly savings over time</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={visibleData}
+              data={dataWithSavings}
               margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />

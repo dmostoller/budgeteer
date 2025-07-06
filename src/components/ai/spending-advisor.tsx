@@ -65,7 +65,7 @@ export function SpendingAdvisor() {
   };
 
   return (
-    <Card className="flex flex-col h-[600px]">
+    <Card className="flex flex-col h-[700px]">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <SparkleIcon className="size-5 text-primary" />

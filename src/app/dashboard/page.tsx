@@ -3,31 +3,34 @@ import { IncomeExpenseChart } from "@/components/dashboard/income-expense-chart"
 import { ExpenseDistributionChart } from "@/components/dashboard/expense-distribution-chart";
 import { SavingsTrendChart } from "@/components/dashboard/savings-trend-chart";
 import { UpcomingPayments } from "@/components/dashboard/upcoming-payments";
+import { DashboardDateRange } from "@/components/dashboard/dashboard-date-range";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
-import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import {
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  format,
+  eachMonthOfInterval,
+} from "date-fns";
 
 export const dynamic = "force-dynamic";
 
-async function fetchDashboardData(userId: string) {
-  // Get current month data
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  const monthStart = startOfMonth(new Date(currentYear, currentMonth));
-  const monthEnd = endOfMonth(new Date(currentYear, currentMonth));
-
-  // Get current month income total
+async function fetchDashboardData(
+  userId: string,
+  startDate: Date,
+  endDate: Date,
+) {
+  // Get income total for date range
   const incomeTotal = await prisma.income.aggregate({
     where: {
       userId,
       date: {
-        gte: monthStart,
-        lte: monthEnd,
+        gte: startDate,
+        lte: endDate,
       },
     },
     _sum: {
@@ -35,13 +38,13 @@ async function fetchDashboardData(userId: string) {
     },
   });
 
-  // Get current month expense total
+  // Get expense total for date range
   const expenseTotal = await prisma.expense.aggregate({
     where: {
       userId,
       date: {
-        gte: monthStart,
-        lte: monthEnd,
+        gte: startDate,
+        lte: endDate,
       },
     },
     _sum: {
@@ -49,21 +52,22 @@ async function fetchDashboardData(userId: string) {
     },
   });
 
-  // Get monthly data for the chart (last 6 months)
+  // Get monthly data for the selected date range
   const monthlyData = [];
-  for (let i = 5; i >= 0; i--) {
-    const chartMonth = subMonths(today, i);
-    const chartMonthStart = startOfMonth(chartMonth);
-    const chartMonthEnd = endOfMonth(chartMonth);
-    const monthName = format(chartMonth, "MMM yyyy");
+  const months = eachMonthOfInterval({ start: startDate, end: endDate });
+
+  for (const month of months) {
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+    const monthName = format(month, "MMM yyyy");
 
     // Calculate month income
     const monthIncome = await prisma.income.aggregate({
       where: {
         userId,
         date: {
-          gte: chartMonthStart,
-          lte: chartMonthEnd,
+          gte: monthStart,
+          lte: monthEnd,
         },
       },
       _sum: {
@@ -76,8 +80,8 @@ async function fetchDashboardData(userId: string) {
       where: {
         userId,
         date: {
-          gte: chartMonthStart,
-          lte: chartMonthEnd,
+          gte: monthStart,
+          lte: monthEnd,
         },
       },
       _sum: {
@@ -96,6 +100,7 @@ async function fetchDashboardData(userId: string) {
   }
 
   // Get upcoming payments
+  const today = new Date();
   const twoWeeksLater = new Date(today);
   twoWeeksLater.setDate(today.getDate() + 14);
 
@@ -157,14 +162,14 @@ async function fetchDashboardData(userId: string) {
     })),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // Get expense distribution by category for current month
+  // Get expense distribution by category for date range
   const expenseCategories = await prisma.expense.groupBy({
     by: ["category"],
     where: {
       userId,
       date: {
-        gte: monthStart,
-        lte: monthEnd,
+        gte: startDate,
+        lte: endDate,
       },
     },
     _sum: {
@@ -178,8 +183,8 @@ async function fetchDashboardData(userId: string) {
     where: {
       userId,
       nextPaymentDate: {
-        gte: monthStart,
-        lte: monthEnd,
+        gte: startDate,
+        lte: endDate,
       },
     },
     _sum: {
@@ -223,8 +228,9 @@ async function fetchDashboardData(userId: string) {
   );
 
   return {
-    currentMonth: {
-      name: format(today, "MMMM yyyy"),
+    dateRange: {
+      startDate,
+      endDate,
       totalIncome: Number(incomeTotal._sum.amount || 0),
       totalExpenses: Number(expenseTotal._sum.amount || 0),
       netBalance:
@@ -237,49 +243,68 @@ async function fetchDashboardData(userId: string) {
   };
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
     return null;
   }
 
-  const dashboardData = await fetchDashboardData(session.user.id);
+  const params = await searchParams;
+
+  // Default date range: last 3 months
+  const defaultFrom = startOfMonth(subMonths(new Date(), 2));
+  const defaultTo = endOfMonth(new Date());
+
+  const fromDate = params.from ? new Date(params.from) : defaultFrom;
+  const toDate = params.to ? new Date(params.to) : defaultTo;
+
+  const dashboardData = await fetchDashboardData(
+    session.user.id,
+    fromDate,
+    toDate,
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <div className="flex space-x-2">
-          <Link href="/dashboard/income/new">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Income
-            </Button>
-          </Link>
-          <Link href="/dashboard/spending/new">
-            <Button variant="outline">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Expense
-            </Button>
-          </Link>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <div className="flex space-x-2">
+            <Link href="/dashboard/income/new">
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Income
+              </Button>
+            </Link>
+            <Link href="/dashboard/spending/new">
+              <Button variant="outline">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Expense
+              </Button>
+            </Link>
+          </div>
         </div>
+        <DashboardDateRange />
       </div>
 
       <SummaryStats
-        totalIncome={dashboardData.currentMonth.totalIncome}
-        totalExpenses={dashboardData.currentMonth.totalExpenses}
-        netBalance={dashboardData.currentMonth.netBalance}
-        monthName={dashboardData.currentMonth.name}
+        totalIncome={dashboardData.dateRange.totalIncome}
+        totalExpenses={dashboardData.dateRange.totalExpenses}
+        netBalance={dashboardData.dateRange.netBalance}
+        startDate={dashboardData.dateRange.startDate}
+        endDate={dashboardData.dateRange.endDate}
       />
 
       {/* First row of charts - Income/Expense Bar Chart and Upcoming Payments */}
 
       {/* Second row of charts - Expense Distribution and Savings Trend */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-        <div className="col-span-full">
-          <IncomeExpenseChart data={dashboardData.monthlyData} />
-        </div>
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+        <IncomeExpenseChart data={dashboardData.monthlyData} />
         <ExpenseDistributionChart data={dashboardData.expenseDistribution} />
         <SavingsTrendChart data={dashboardData.monthlyData} />
       </div>
