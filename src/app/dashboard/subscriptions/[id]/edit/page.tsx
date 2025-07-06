@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function EditSubscriptionPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await auth();
   
@@ -20,9 +20,11 @@ export default async function EditSubscriptionPage({
     return null;
   }
   
+  const { id } = await params;
+  
   const subscription = await prisma.subscription.findUnique({
     where: {
-      id: params.id,
+      id: id,
       userId: session.user.id,
     },
   });

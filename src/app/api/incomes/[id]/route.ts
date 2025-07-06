@@ -7,7 +7,14 @@ const incomeSchema = z.object({
   source: z.string().min(2),
   amount: z.number().positive(),
   date: z.coerce.date(),
-  category: z.enum(["SALARY", "FREELANCE", "BONUS", "INVESTMENT", "GIFT", "OTHER"]),
+  category: z.enum([
+    "SALARY",
+    "FREELANCE",
+    "BONUS",
+    "INVESTMENT",
+    "GIFT",
+    "OTHER",
+  ]),
   isRecurring: z.boolean().default(false),
   recurrencePeriod: z
     .enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"])
@@ -15,14 +22,17 @@ const incomeSchema = z.object({
     .nullable(),
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const incomeId = params.id;
+    const { id: incomeId } = await params;
 
     const income = await prisma.income.findUnique({
       where: {
@@ -40,19 +50,22 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     console.error("Error fetching income:", error);
     return NextResponse.json(
       { error: "Failed to fetch income" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const incomeId = params.id;
+    const { id: incomeId } = await params;
     const body = await req.json();
     const validatedData = incomeSchema.parse(body);
 
@@ -85,19 +98,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     console.error("Error updating income:", error);
     return NextResponse.json(
       { error: "Failed to update income" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const incomeId = params.id;
+    const { id: incomeId } = await params;
 
     // Verify ownership
     const existingIncome = await prisma.income.findUnique({
@@ -123,7 +139,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     console.error("Error deleting income:", error);
     return NextResponse.json(
       { error: "Failed to delete income" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

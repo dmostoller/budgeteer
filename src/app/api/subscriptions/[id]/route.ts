@@ -11,14 +11,14 @@ const subscriptionSchema = z.object({
   category: z.enum(["SUBSCRIPTIONS"]).default("SUBSCRIPTIONS"),
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subscriptionId = params.id;
+    const { id: subscriptionId } = await params;
 
     const subscription = await prisma.subscription.findUnique({
       where: {
@@ -41,14 +41,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subscriptionId = params.id;
+    const { id: subscriptionId } = await params;
     const body = await req.json();
     const validatedData = subscriptionSchema.parse(body);
 
@@ -86,14 +86,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subscriptionId = params.id;
+    const { id: subscriptionId } = await params;
 
     // Verify ownership
     const existingSubscription = await prisma.subscription.findUnique({

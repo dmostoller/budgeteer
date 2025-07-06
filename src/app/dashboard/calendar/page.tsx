@@ -332,7 +332,7 @@ async function fetchCalendarEvents(userId: string, dateParam?: string) {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: { date?: string };
+  searchParams: Promise<{ date?: string }>;
 }) {
   const session = await auth();
 
@@ -340,7 +340,8 @@ export default async function CalendarPage({
     return null;
   }
 
-  const events = await fetchCalendarEvents(session.user.id, searchParams.date);
+  const params = await searchParams;
+  const events = await fetchCalendarEvents(session.user.id, params.date);
 
   return (
     <div className="space-y-6">

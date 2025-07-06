@@ -1,6 +1,6 @@
 "use client";
 
-import { useChat } from "ai/react";
+import { useChat } from "@ai-sdk/react";
 import { useState, useRef, useEffect } from "react";
 import {
   Card,
@@ -55,10 +55,12 @@ export function SpendingAdvisor() {
     handleInputChange({
       target: { value: suggestion },
     } as React.ChangeEvent<HTMLInputElement>);
-    
+
     // Submit after a short delay to ensure the input value is updated
     setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
+      handleSubmit({
+        preventDefault: () => {},
+      } as React.FormEvent<HTMLFormElement>);
     }, 10);
   };
 
@@ -81,7 +83,9 @@ export function SpendingAdvisor() {
                 : "bg-muted",
             )}
           >
-            <span className="text-sm whitespace-pre-line">{message.content}</span>
+            <span className="text-sm whitespace-pre-line">
+              {message.content}
+            </span>
           </div>
         ))}
         {error && (

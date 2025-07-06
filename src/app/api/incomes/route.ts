@@ -7,7 +7,14 @@ const incomeSchema = z.object({
   source: z.string().min(2),
   amount: z.number().positive(),
   date: z.coerce.date(),
-  category: z.enum(["SALARY", "FREELANCE", "BONUS", "INVESTMENT", "GIFT", "OTHER"]),
+  category: z.enum([
+    "SALARY",
+    "FREELANCE",
+    "BONUS",
+    "INVESTMENT",
+    "GIFT",
+    "OTHER",
+  ]),
   isRecurring: z.boolean().default(false),
   recurrencePeriod: z
     .enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"])
@@ -52,7 +59,7 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching incomes:", error);
     return NextResponse.json(
       { error: "Failed to fetch incomes" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -84,7 +91,7 @@ export async function POST(req: NextRequest) {
     console.error("Error creating income:", error);
     return NextResponse.json(
       { error: "Failed to create income" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

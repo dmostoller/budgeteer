@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function EditExpensePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await auth();
   
@@ -20,9 +20,11 @@ export default async function EditExpensePage({
     return null;
   }
   
+  const { id } = await params;
+  
   const expense = await prisma.expense.findUnique({
     where: {
-      id: params.id,
+      id: id,
       userId: session.user.id,
     },
   });

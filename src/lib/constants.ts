@@ -1,4 +1,9 @@
-import { BillingCycle, ExpenseCategory, IncomeCategory, RecurrencePeriod } from "@prisma/client";
+import {
+  BillingCycle,
+  ExpenseCategory,
+  IncomeCategory,
+  RecurrencePeriod,
+} from "@prisma/client";
 
 export const INCOME_CATEGORIES = [
   { value: IncomeCategory.SALARY, label: "Salary" },
@@ -35,15 +40,16 @@ export const BILLING_CYCLES = [
   { value: BillingCycle.YEARLY, label: "Yearly" },
 ];
 
-export const CATEGORY_COLORS = {
+export const CATEGORY_COLORS: Record<string, string> = {
   // Income categories
   [IncomeCategory.SALARY]: "#4ade80",
   [IncomeCategory.FREELANCE]: "#38bdf8",
   [IncomeCategory.BONUS]: "#a78bfa",
   [IncomeCategory.INVESTMENT]: "#2dd4bf",
   [IncomeCategory.GIFT]: "#fb923c",
-  [IncomeCategory.OTHER]: "#94a3b8",
-  
+  // Income OTHER uses a different color
+  "income_OTHER": "#94a3b8",
+
   // Expense categories
   [ExpenseCategory.HOUSING]: "#ef4444",
   [ExpenseCategory.FOOD]: "#f97316",
