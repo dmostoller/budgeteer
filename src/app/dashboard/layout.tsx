@@ -1,8 +1,6 @@
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { cookies } from "next/headers"; // Import cookies
-import { auth } from "@/lib/auth";
 import { ModeToggle } from "@/components/mode-toggle";
 // Import the specific sidebar components including Provider and Inset
 import {
@@ -59,14 +57,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
   const cookieStore = await cookies(); // Get cookies
   // Determine default state from cookie, default to true if not set or invalid
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
-
-  if (!session?.user) {
-    redirect("/login");
-  }
 
   return (
     // Wrap everything in SidebarProvider

@@ -1,9 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { LoginButton } from "@/components/auth/login-button";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Login | Budgeteer",
@@ -11,13 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage() {
-  const session = await auth();
-
-  // Redirect to dashboard if already authenticated
-  if (session) {
-    redirect("/dashboard");
-  }
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px] px-8">

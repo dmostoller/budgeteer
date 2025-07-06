@@ -2,7 +2,7 @@ import { SummaryStats } from "@/components/dashboard/summary-stats";
 import { IncomeExpenseChart } from "@/components/dashboard/income-expense-chart";
 import { ExpenseDistributionChart } from "@/components/dashboard/expense-distribution-chart";
 import { SavingsTrendChart } from "@/components/dashboard/savings-trend-chart";
-import { UpcomingPayments } from "@/components/dashboard/upcoming-payments";
+// import { UpcomingPayments } from "@/components/dashboard/upcoming-payments";
 import { DashboardDateRange } from "@/components/dashboard/dashboard-date-range";
 import { IncomeDistributionChart } from "@/components/dashboard/income-distribution-chart";
 import { CashFlowWaterfallChart } from "@/components/dashboard/cash-flow-waterfall-chart";
@@ -569,9 +569,9 @@ export default async function DashboardPage({
       </div>
 
       {/* Subscriptions and Upcoming Payments */}
-      <div className="grid gap-4 grid-cols-1">
+      {/* <div className="grid gap-4 grid-cols-1">
         <UpcomingPayments payments={dashboardData.upcomingPayments} />
-      </div>
+      </div> */}
     </div>
   );
 }
