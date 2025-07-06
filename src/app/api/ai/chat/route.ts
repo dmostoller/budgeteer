@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 
     // First, detect the intent
     const intentResponse = await generateObject({
-      model: google("gemini-1.5-flash"),
+      model: google("gemini-2.5-flash-lite-preview-06-17"),
       prompt: `
 Analyze this user message and determine the intent:
 "${lastMessage}"
@@ -96,7 +96,7 @@ Extract relevant parameters like amounts, dates, categories, etc.
 
       // Stream the success message instead of returning JSON
       const result = await streamText({
-        model: google("gemini-1.5-flash"),
+        model: google("gemini-2.5-flash-lite-preview-06-17"),
         messages: [
           ...messages,
           {
@@ -131,7 +131,7 @@ Extract relevant parameters like amounts, dates, categories, etc.
 
       // Stream the success message instead of returning JSON
       const result = await streamText({
-        model: google("gemini-1.5-flash"),
+        model: google("gemini-2.5-flash-lite-preview-06-17"),
         messages: [
           ...messages,
           {
@@ -196,7 +196,7 @@ Extract relevant parameters like amounts, dates, categories, etc.
 
     // Stream the response
     const result = await streamText({
-      model: google("gemini-1.5-flash"),
+      model: google("gemini-2.5-flash-lite-preview-06-17"),
       messages: [
         {
           role: "system",

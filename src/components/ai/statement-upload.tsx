@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
+import { extractFileContent, isFileSupported, getFileTypeInfo } from "@/lib/file-extraction";
 import {
   Card,
   CardContent,
@@ -49,19 +50,42 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
     if (acceptedFiles.length === 0) return;
 
     const file = acceptedFiles[0];
+    
+    // Reset state to ensure clean processing
     setError(null);
+    setTransactions([]);
+    setShowReview(false);
     setIsProcessing(true);
-    setUploadProgress(20);
+    setUploadProgress(10);
+
+    // Validate file type
+    if (!isFileSupported(file)) {
+      setError("Unsupported file type. Please upload a PDF, CSV, or image file.");
+      setIsProcessing(false);
+      setUploadProgress(0);
+      return;
+    }
 
     try {
-      // For now, we'll send the file directly
-      // In production, you might want to extract text from PDF first
       const formData = new FormData();
       formData.append("file", file);
-
-      // For demo purposes, let's simulate PDF text extraction
-      const fileContent = await file.text();
-      formData.append("content", fileContent);
+      
+      const fileInfo = getFileTypeInfo(file);
+      formData.append("fileType", fileInfo.type);
+      
+      setUploadProgress(20);
+      
+      // Try to extract content client-side for text files
+      if (!fileInfo.requiresServerProcessing) {
+        try {
+          const fileContent = await extractFileContent(file);
+          if (fileContent && fileContent.trim()) {
+            formData.append("content", fileContent);
+          }
+        } catch (error) {
+          console.warn("Failed to extract file content client-side:", error);
+        }
+      }
 
       setUploadProgress(50);
 
@@ -73,10 +97,16 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
       setUploadProgress(80);
 
       if (!response.ok) {
-        throw new Error("Failed to analyze statement");
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to analyze statement");
       }
 
       const data = await response.json();
+      
+      if (!data.transactions || data.transactions.length === 0) {
+        throw new Error("No transactions found in the statement. Please ensure the file contains transaction data.");
+      }
+      
       setTransactions(data.transactions);
       setShowReview(true);
       setUploadProgress(100);
@@ -84,8 +114,12 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
       toast.success(`Found ${data.transactions.length} transactions to import`);
     } catch (err) {
       console.error("Upload error:", err);
-      setError("Failed to process the bank statement. Please try again.");
-      toast.error("Failed to process bank statement");
+      const errorMessage = err instanceof Error ? err.message : "Failed to process the bank statement";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      // Reset state on error
+      setTransactions([]);
+      setShowReview(false);
     } finally {
       setIsProcessing(false);
       setTimeout(() => setUploadProgress(0), 1000);
@@ -98,9 +132,21 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
       "application/pdf": [".pdf"],
       "image/*": [".png", ".jpg", ".jpeg"],
       "text/csv": [".csv"],
+      "text/plain": [".txt"],
     },
     maxFiles: 1,
+    maxSize: 10 * 1024 * 1024, // 10MB limit
     disabled: isProcessing,
+    onDropRejected: (rejections) => {
+      const rejection = rejections[0];
+      if (rejection.errors[0]?.code === "file-too-large") {
+        setError("File is too large. Maximum size is 10MB.");
+      } else if (rejection.errors[0]?.code === "file-invalid-type") {
+        setError("Invalid file type. Please upload a PDF, CSV, TXT, or image file.");
+      } else {
+        setError("Failed to upload file. Please try again.");
+      }
+    },
   });
 
   const handleImport = async (selectedTransactions: Transaction[]) => {
@@ -209,7 +255,7 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
             or click to select a file
           </p>
           <p className="text-xs text-muted-foreground">
-            Supports PDF, PNG, JPG, and CSV files
+            Supports PDF, PNG, JPG, CSV, and TXT files (max 10MB)
           </p>
         </div>
 
@@ -236,7 +282,7 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
             <div className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
               <p className="text-sm text-muted-foreground">
-                AI analyzes your statement and extracts all transactions
+                Upload PDF, CSV, or image files - AI extracts text automatically
               </p>
             </div>
             <div className="flex items-start gap-2">

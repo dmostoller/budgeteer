@@ -38,10 +38,51 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const fileContent = formData.get("content") as string;
+    let fileContent = formData.get("content") as string;
+    const fileType = formData.get("fileType") as string;
 
-    if (!file && !fileContent) {
-      return new Response("No file or content provided", { status: 400 });
+    if (!file) {
+      return new Response("No file provided", { status: 400 });
+    }
+
+    // Extract content based on file type
+    if (!fileContent || fileContent === "PDF_FILE_REQUIRES_SERVER_PROCESSING") {
+      if (fileType === "pdf" || file.type === "application/pdf") {
+        try {
+          // Dynamically import pdf-parse to avoid initialization issues
+          const pdf = (await import("pdf-parse")).default;
+
+          // Convert File to Buffer for pdf-parse
+          const arrayBuffer = await file.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const pdfData = await pdf(buffer);
+          fileContent = pdfData.text;
+
+          if (!fileContent || fileContent.trim().length === 0) {
+            return new Response(
+              "Could not extract text from PDF. The file may be image-based or corrupted.",
+              { status: 400 },
+            );
+          }
+        } catch (error) {
+          console.error("PDF parsing error:", error);
+          // Provide a helpful error message
+          return new Response(
+            "Failed to parse PDF file. Please try uploading a different format (CSV or TXT) or ensure the PDF contains selectable text.",
+            { status: 400 },
+          );
+        }
+      } else if (fileType === "image" || file.type.startsWith("image/")) {
+        // For images, we'll send them directly to Gemini for OCR
+        fileContent = "[IMAGE FILE - Will be processed by AI for OCR]";
+      }
+    }
+
+    // Validate content
+    if (!fileContent || fileContent.trim().length === 0) {
+      return new Response("No content could be extracted from the file", {
+        status: 400,
+      });
     }
 
     const userId = session.user.id;
@@ -86,7 +127,7 @@ Expenses: ${JSON.stringify(existingTransactions[0].slice(0, 20))}
 Income: ${JSON.stringify(existingTransactions[1].slice(0, 20))}
 
 Bank statement content:
-${fileContent || "Please extract text from the uploaded file"}
+${fileContent}
 
 Important:
 - Clean up transaction descriptions to be readable
@@ -96,7 +137,7 @@ Important:
 `;
 
     const response = await generateObject({
-      model: google("gemini-1.5-flash"),
+      model: google("gemini-2.5-flash-lite-preview-06-17"),
       prompt: systemPrompt,
       schema: analyzedStatementSchema,
       temperature: 0.3,
@@ -134,32 +175,36 @@ Important:
     };
 
     // Process and check for duplicates
-    const processedTransactions = response.object.transactions.map((transaction) => {
-      const transactionDate = new Date(transaction.date);
-      
-      // Check for potential duplicates
-      const isDuplicate = transaction.type === "expense"
-        ? existingTransactions[0].some(
-            (exp) =>
-              exp.date.toDateString() === transactionDate.toDateString() &&
-              Number(exp.amount) === transaction.amount
-          )
-        : existingTransactions[1].some(
-            (inc) =>
-              inc.date.toDateString() === transactionDate.toDateString() &&
-              Number(inc.amount) === transaction.amount
-          );
+    const processedTransactions = response.object.transactions.map(
+      (transaction) => {
+        const transactionDate = new Date(transaction.date);
 
-      return {
-        ...transaction,
-        date: transactionDate,
-        category: transaction.type === "expense" 
-          ? mapToExpenseCategory(transaction.category)
-          : mapToIncomeCategory(transaction.category),
-        isDuplicate,
-        suggestedAction: isDuplicate ? "skip" : "import",
-      };
-    });
+        // Check for potential duplicates
+        const isDuplicate =
+          transaction.type === "expense"
+            ? existingTransactions[0].some(
+                (exp) =>
+                  exp.date.toDateString() === transactionDate.toDateString() &&
+                  Number(exp.amount) === transaction.amount,
+              )
+            : existingTransactions[1].some(
+                (inc) =>
+                  inc.date.toDateString() === transactionDate.toDateString() &&
+                  Number(inc.amount) === transaction.amount,
+              );
+
+        return {
+          ...transaction,
+          date: transactionDate,
+          category:
+            transaction.type === "expense"
+              ? mapToExpenseCategory(transaction.category)
+              : mapToIncomeCategory(transaction.category),
+          isDuplicate,
+          suggestedAction: isDuplicate ? "skip" : "import",
+        };
+      },
+    );
 
     return new Response(
       JSON.stringify({
@@ -171,10 +216,30 @@ Important:
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   } catch (error) {
     console.error("[AI-ANALYZE-STATEMENT-ERROR]", error);
-    return new Response("Internal Server Error", { status: 500 });
+
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes("parse") || error.message.includes("PDF")) {
+        return new Response(
+          "Failed to parse the document. Please ensure it's a valid bank statement.",
+          { status: 400 },
+        );
+      }
+      if (error.message.includes("AI") || error.message.includes("generate")) {
+        return new Response(
+          "AI analysis failed. Please try again or upload a different format.",
+          { status: 500 },
+        );
+      }
+    }
+
+    return new Response(
+      "Failed to analyze the bank statement. Please try again.",
+      { status: 500 },
+    );
   }
 }

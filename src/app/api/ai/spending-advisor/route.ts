@@ -112,7 +112,7 @@ Now provide a helpful response that:
 
     // Stream the response
     const result = await streamText({
-      model: google("gemini-1.5-flash"),
+      model: google("gemini-2.5-flash-lite-preview-06-17"),
       messages: [
         {
           role: "system",
