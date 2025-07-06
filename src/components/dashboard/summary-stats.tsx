@@ -1,6 +1,7 @@
 "use client";
 
 import { DollarSign, ArrowDownRight, TrendingUp } from "lucide-react";
+import { format } from "date-fns";
 import {
   Card,
   CardContent,
@@ -13,14 +14,16 @@ interface SummaryStatsProps {
   totalIncome: number;
   totalExpenses: number;
   netBalance: number;
-  monthName: string;
+  startDate: Date;
+  endDate: Date;
 }
 
 export function SummaryStats({
   totalIncome,
   totalExpenses,
   netBalance,
-  monthName,
+  startDate,
+  endDate,
 }: SummaryStatsProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -28,6 +31,9 @@ export function SummaryStats({
       currency: "USD",
     }).format(amount);
   };
+
+  // Format date range for display
+  const dateRangeString = `${format(startDate, "MMM dd, yyyy")} - ${format(endDate, "MMM dd, yyyy")}`;
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -40,7 +46,7 @@ export function SummaryStats({
           <div className="text-2xl font-bold text-primary">
             {formatCurrency(totalIncome)}
           </div>
-          <CardDescription className="pt-1">{monthName} Income</CardDescription>
+          <CardDescription className="pt-1">Total Income</CardDescription>
         </CardContent>
       </Card>
 
@@ -53,9 +59,7 @@ export function SummaryStats({
           <div className="text-2xl font-bold text-destructive">
             {formatCurrency(totalExpenses)}
           </div>
-          <CardDescription className="pt-1">
-            {monthName} Expenses
-          </CardDescription>
+          <CardDescription className="pt-1">Total Expenses</CardDescription>
         </CardContent>
       </Card>
 
@@ -74,9 +78,7 @@ export function SummaryStats({
           >
             {formatCurrency(netBalance)}
           </div>
-          <CardDescription className="pt-1">
-            Savings for {monthName}
-          </CardDescription>
+          <CardDescription className="pt-1">{dateRangeString}</CardDescription>
         </CardContent>
       </Card>
     </div>

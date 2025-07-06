@@ -12,32 +12,34 @@ export const metadata: Metadata = {
 export default async function EditIncomePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     return null;
   }
-  
+
+  const { id } = await params;
+
   const income = await prisma.income.findUnique({
     where: {
-      id: params.id,
+      id: id,
       userId: session.user.id,
     },
   });
-  
+
   if (!income) {
     notFound();
   }
-  
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Income</h1>
         <p className="text-muted-foreground">Edit an existing income record</p>
       </div>
-      <IncomeForm 
+      <IncomeForm
         defaultValues={{
           source: income.source,
           amount: Number(income.amount),
@@ -45,8 +47,8 @@ export default async function EditIncomePage({
           category: income.category,
           isRecurring: income.isRecurring,
           recurrencePeriod: income.recurrencePeriod || undefined,
-        }} 
-        incomeId={income.id} 
+        }}
+        incomeId={income.id}
       />
     </div>
   );

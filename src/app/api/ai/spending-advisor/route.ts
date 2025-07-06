@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { google } from "@ai-sdk/google";
-import { generateText } from "ai";
+import { streamText } from "ai";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const { prompt } = await req.json();
+    const { messages } = await req.json();
     const userId = session.user.id;
 
     // Fetch user financial data
@@ -89,8 +89,8 @@ export async function POST(req: Request) {
       })
       .reduce((sum, income) => sum + Number(income.amount), 0);
 
-    // Build the AI context
-    const systemPrompt = `
+    // Build the system context
+    const systemContext = `
 You are an AI financial advisor that analyzes spending patterns and offers personalized advice to save money. 
 Be specific, actionable, and supportive, not judgmental.
 
@@ -102,9 +102,6 @@ USER'S FINANCIAL SUMMARY:
 DETAILED FINANCIAL DATA:
 ${JSON.stringify(financialData, null, 2)}
 
-USER'S QUESTION:
-${prompt}
-
 Now provide a helpful response that:
 1. Analyzes their current spending patterns
 2. Identifies potential savings opportunities
@@ -113,25 +110,20 @@ Now provide a helpful response that:
 5. Maintains a supportive, encouraging tone
 `;
 
-    // Generate text using the AI SDK
-    const response = await generateText({
-      model: google("gemini-1.5-flash"),
-      prompt: systemPrompt,
+    // Stream the response
+    const result = await streamText({
+      model: google("gemini-2.5-flash-lite-preview-06-17"),
+      messages: [
+        {
+          role: "system",
+          content: systemContext,
+        },
+        ...messages,
+      ],
       temperature: 0.7,
-      maxTokens: 8192,
     });
 
-    // Ensure the response contains valid text
-    if (!response || typeof response.text !== "string") {
-      throw new Error("Invalid response from AI model");
-    }
-
-    return new Response(JSON.stringify({ text: response.text }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    return result.toDataStreamResponse();
   } catch (error) {
     console.error("[AI-SPENDING-ADVISOR-ERROR]", error);
     return new Response("Internal Server Error", { status: 500 });

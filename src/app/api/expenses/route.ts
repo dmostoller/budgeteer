@@ -7,7 +7,18 @@ const expenseSchema = z.object({
   description: z.string().min(2),
   amount: z.number().positive(),
   date: z.coerce.date(),
-  category: z.enum(["HOUSING", "FOOD", "TRANSPORTATION", "UTILITIES", "ENTERTAINMENT", "SUBSCRIPTIONS", "HEALTHCARE", "PERSONAL_CARE", "DEBT_PAYMENT", "OTHER"]),
+  category: z.enum([
+    "HOUSING",
+    "FOOD",
+    "TRANSPORTATION",
+    "UTILITIES",
+    "ENTERTAINMENT",
+    "SUBSCRIPTIONS",
+    "HEALTHCARE",
+    "PERSONAL_CARE",
+    "DEBT_PAYMENT",
+    "OTHER",
+  ]),
   isRecurring: z.boolean().default(false),
   recurrencePeriod: z
     .enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"])
@@ -52,7 +63,7 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching expenses:", error);
     return NextResponse.json(
       { error: "Failed to fetch expenses" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -84,7 +95,7 @@ export async function POST(req: NextRequest) {
     console.error("Error creating expense:", error);
     return NextResponse.json(
       { error: "Failed to create expense" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

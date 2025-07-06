@@ -15,18 +15,21 @@ import {
   SidebarMenuButton,
   SidebarProvider, // Import Provider
   SidebarInset, // Import Inset
-  // SidebarTrigger,
+  SidebarTrigger,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
-  HomeIcon,
-  DollarSign,
-  Receipt,
-  CalendarIcon,
-  CreditCard,
-  SparkleIcon,
+  LayoutDashboard,
+  CalendarDays,
+  CalendarSync,
+  BanknoteArrowDown,
+  BanknoteArrowUp,
+  Sparkles,
 } from "lucide-react";
 import Image from "next/image";
 import { NavUser } from "@/components/auth/nav-user";
+import { Separator } from "@/components/ui/separator";
+import { DashboardBreadcrumbs } from "@/components/dashboard-breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Dashboard | Budgeteer",
@@ -35,16 +38,20 @@ export const metadata: Metadata = {
 
 // Define navigation items
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
-  { href: "/dashboard/income", label: "Income", icon: DollarSign },
-  { href: "/dashboard/spending", label: "Spending", icon: Receipt },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/income", label: "Income", icon: BanknoteArrowUp },
+  { href: "/dashboard/spending", label: "Spending", icon: BanknoteArrowDown },
   {
     href: "/dashboard/subscriptions",
     label: "Subscriptions",
-    icon: CreditCard,
+    icon: CalendarSync,
   },
-  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarIcon },
-  { href: "/dashboard/advisor", label: "AI Advisor", icon: SparkleIcon },
+  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
+  {
+    href: "/dashboard/advisor?tab=assistant",
+    label: "AI Advisor",
+    icon: Sparkles,
+  },
 ];
 
 export default async function DashboardLayout({
@@ -63,28 +70,47 @@ export default async function DashboardLayout({
 
   return (
     // Wrap everything in SidebarProvider
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider
+      defaultOpen={defaultOpen}
+      style={
+        {
+          "--sidebar-width-icon": "4rem",
+        } as React.CSSProperties
+      }
+    >
       {/* The actual Sidebar component */}
-      <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center pl-3">
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="group-data-[collapsible=icon]:px-2">
+          <div className="flex items-center group-data-[collapsible=icon]:justify-center">
+            {/* Show mascot when expanded */}
             <Image
               src="/mascot.png"
-              width={75}
-              height={75}
+              width={100}
+              height={100}
               alt="Budgeteer Logo"
+              className="transition-all duration-200 group-data-[collapsible=icon]:hidden"
             />
-            <span className="ml-2 text-xl font-bold">Budgeteer</span>
+            {/* Show B logo when collapsed */}
+            <Image
+              src="/b-logo.png"
+              width={32}
+              height={32}
+              alt="Budgeteer Logo"
+              className="hidden transition-all duration-200 group-data-[collapsible=icon]:block"
+            />
+            <span className="ml-2 text-xl font-bold transition-all duration-200 group-data-[collapsible=icon]:hidden">
+              Budgeteer
+            </span>
           </div>
         </SidebarHeader>
-        <SidebarContent className="pt-4">
+        <SidebarContent className="pt-4 px-2">
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip={item.label}>
                   <Link href={item.href}>
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.label}
+                    <item.icon />
+                    <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -92,20 +118,25 @@ export default async function DashboardLayout({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <div className="flex items-center justify-between">
-            <NavUser />
-            <ModeToggle />
-          </div>
+          <NavUser />
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
 
       {/* Wrap the main content area with SidebarInset */}
       <SidebarInset>
         <div className="flex flex-col min-h-screen">
-          {/* <header className="flex h-14 shrink-0 items-center gap-4 border-b px-4 lg:px-6">
-            <div className="ml-auto flex items-center gap-2">
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <DashboardBreadcrumbs />
+            <div className="ml-auto">
+              <ModeToggle />
             </div>
-          </header> */}
+          </header>
           <main className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
             {children}
           </main>

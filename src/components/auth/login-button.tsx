@@ -20,8 +20,8 @@ export function LoginButton() {
   };
 
   return (
-    <Button 
-      onClick={handleLogin} 
+    <Button
+      onClick={handleLogin}
       disabled={isLoading}
       className="w-full sm:w-auto"
     >

@@ -11,14 +11,17 @@ const subscriptionSchema = z.object({
   category: z.enum(["SUBSCRIPTIONS"]).default("SUBSCRIPTIONS"),
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subscriptionId = params.id;
+    const { id: subscriptionId } = await params;
 
     const subscription = await prisma.subscription.findUnique({
       where: {
@@ -28,7 +31,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     });
 
     if (!subscription) {
-      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Subscription not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json(subscription);
@@ -36,19 +42,22 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     console.error("Error fetching subscription:", error);
     return NextResponse.json(
       { error: "Failed to fetch subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subscriptionId = params.id;
+    const { id: subscriptionId } = await params;
     const body = await req.json();
     const validatedData = subscriptionSchema.parse(body);
 
@@ -61,7 +70,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
 
     if (!existingSubscription) {
-      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Subscription not found" },
+        { status: 404 },
+      );
     }
 
     // Update the subscription record
@@ -81,19 +93,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     console.error("Error updating subscription:", error);
     return NextResponse.json(
       { error: "Failed to update subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subscriptionId = params.id;
+    const { id: subscriptionId } = await params;
 
     // Verify ownership
     const existingSubscription = await prisma.subscription.findUnique({
@@ -104,7 +119,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     });
 
     if (!existingSubscription) {
-      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Subscription not found" },
+        { status: 404 },
+      );
     }
 
     // Delete the subscription record
@@ -119,7 +137,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     console.error("Error deleting subscription:", error);
     return NextResponse.json(
       { error: "Failed to delete subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

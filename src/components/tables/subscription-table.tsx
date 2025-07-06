@@ -56,10 +56,14 @@ export function SubscriptionTable({ data }: SubscriptionTableProps) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
-  const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null);
-  
+  const [subscriptionToDelete, setSubscriptionToDelete] = useState<
+    string | null
+  >(null);
+
   const getBillingCycleLabel = (value: BillingCycle) => {
-    return BILLING_CYCLES.find(cycle => cycle.value === value)?.label || value;
+    return (
+      BILLING_CYCLES.find((cycle) => cycle.value === value)?.label || value
+    );
   };
 
   const columns: ColumnDef<Subscription>[] = [
@@ -94,9 +98,10 @@ export function SubscriptionTable({ data }: SubscriptionTableProps) {
       cell: ({ row }) => {
         const date = new Date(row.getValue("nextPaymentDate"));
         const today = new Date();
-        const isUpcoming = isAfter(date, today) && isBefore(date, addDays(today, 7));
+        const isUpcoming =
+          isAfter(date, today) && isBefore(date, addDays(today, 7));
         const isPast = isBefore(date, today);
-        
+
         return (
           <div className="flex items-center gap-2">
             {format(date, "MMM d, yyyy")}
@@ -124,7 +129,9 @@ export function SubscriptionTable({ data }: SubscriptionTableProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push(`/dashboard/subscriptions/${row.original.id}/edit`)}
+              onClick={() =>
+                router.push(`/dashboard/subscriptions/${row.original.id}/edit`)
+              }
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -147,7 +154,9 @@ export function SubscriptionTable({ data }: SubscriptionTableProps) {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setSubscriptionToDelete(null)}>
+                  <AlertDialogCancel
+                    onClick={() => setSubscriptionToDelete(null)}
+                  >
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
@@ -158,7 +167,7 @@ export function SubscriptionTable({ data }: SubscriptionTableProps) {
                           `/api/subscriptions/${subscriptionToDelete}`,
                           {
                             method: "DELETE",
-                          }
+                          },
                         );
 
                         if (!response.ok) {
@@ -214,7 +223,7 @@ export function SubscriptionTable({ data }: SubscriptionTableProps) {
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   );
@@ -233,7 +242,7 @@ export function SubscriptionTable({ data }: SubscriptionTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

@@ -28,7 +28,7 @@ const expenseSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
@@ -36,7 +36,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const expenseId = params.id;
+    const { id: expenseId } = await params;
 
     const expense = await prisma.expense.findUnique({
       where: {
@@ -61,7 +61,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
@@ -69,7 +69,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const expenseId = params.id;
+    const { id: expenseId } = await params;
     const body = await req.json();
     const validatedData = expenseSchema.parse(body);
 
@@ -109,7 +109,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
@@ -117,7 +117,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const expenseId = params.id;
+    const { id: expenseId } = await params;
 
     // Verify ownership
     const existingExpense = await prisma.expense.findUnique({

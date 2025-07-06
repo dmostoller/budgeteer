@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
 import {
   Card,
   CardContent,
@@ -8,19 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { addMonths, subMonths, format } from "date-fns";
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
 
 type MonthlyData = {
   month: string;
@@ -33,84 +29,22 @@ interface IncomeExpenseChartProps {
   className?: string;
 }
 
+const chartConfig = {
+  income: {
+    label: "Income",
+    color: "var(--chart-1)",
+  },
+  expenses: {
+    label: "Expenses",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig;
+
 export function IncomeExpenseChart({
   data,
   className,
 }: IncomeExpenseChartProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [visibleData, setVisibleData] = useState<MonthlyData[]>([]);
-
-  // Calculate which 5 months to show (current month in the middle, 2 before, 2 after)
-  useEffect(() => {
-    // Process data to include date objects for easier manipulation
-    const processedData = data.map((item) => {
-      const [monthName, year] = item.month.split(" ");
-      // Convert month name to month number (0-indexed)
-      const monthNum = new Date(`${monthName} 1, ${year}`).getMonth();
-      return {
-        ...item,
-        date: new Date(parseInt(year), monthNum, 1),
-      };
-    });
-
-    // Find 2 months before and 2 months after current date
-    const currentMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1,
-    );
-
-    const twoMonthsBefore = subMonths(currentMonth, 2);
-    const oneMonthBefore = subMonths(currentMonth, 1);
-    const oneMonthAfter = addMonths(currentMonth, 1);
-    const twoMonthsAfter = addMonths(currentMonth, 2);
-
-    const monthsToShow = [
-      twoMonthsBefore,
-      oneMonthBefore,
-      currentMonth,
-      oneMonthAfter,
-      twoMonthsAfter,
-    ];
-
-    // Filter data for these months, or create placeholder data if missing
-    const filteredData = monthsToShow.map((month) => {
-      const foundData = processedData.find(
-        (item) =>
-          item.date.getMonth() === month.getMonth() &&
-          item.date.getFullYear() === month.getFullYear(),
-      );
-
-      if (foundData) {
-        return {
-          month: foundData.month,
-          income: foundData.income,
-          expenses: foundData.expenses,
-        };
-      } else {
-        // Create placeholder data for months that don't exist in the original data
-        return {
-          month: format(month, "MMM yyyy"),
-          income: 0,
-          expenses: 0,
-        };
-      }
-    });
-
-    setVisibleData(filteredData);
-  }, [data, currentDate]);
-
-  // Navigate backward 1 month
-  const handlePrevMonth = () => {
-    setCurrentDate((prevDate) => subMonths(prevDate, 1));
-  };
-
-  // Navigate forward 1 month
-  const handleNextMonth = () => {
-    setCurrentDate((prevDate) => addMonths(prevDate, 1));
-  };
-
-  // Currency formatter for tooltip
+  // Currency formatter for Y-axis and tooltip
   const currencyFormatter = (value: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -120,95 +54,57 @@ export function IncomeExpenseChart({
     }).format(value);
   };
 
-  // Custom tooltip
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: {
-      value: number;
-      name: string;
-      color: string;
-    }[];
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background border rounded-md p-3 shadow-md">
-          <p className="font-medium mb-1">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {currencyFormatter(entry.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Income vs. Expenses</CardTitle>
-            <CardDescription>
-              Comparison of monthly income and expenses
-            </CardDescription>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePrevMonth}
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium">
-              {format(currentDate, "MMMM yyyy")}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNextMonth}
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <CardTitle>Income vs. Expenses</CardTitle>
+        <CardDescription>
+          Comparison of monthly income and expenses
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={visibleData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={currencyFormatter} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar
-                dataKey="income"
-                name="Income"
-                fill="hsl(115deg 54% 76%)" // Catppuccin Green
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="expenses"
-                name="Expenses"
-                fill="hsl(343deg 81% 75%)" // Catppuccin Red
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+          <BarChart
+            accessibilityLayer
+            data={data}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => value.slice(0, 3)}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={10}
+              tickFormatter={currencyFormatter}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  formatter={(value) => currencyFormatter(value as number)}
+                  indicator="dashed"
+                />
+              }
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+            <Bar
+              dataKey="income"
+              fill="var(--color-income)"
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar
+              dataKey="expenses"
+              fill="var(--color-expenses)"
+              radius={[4, 4, 0, 0]}
+            />
+          </BarChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
