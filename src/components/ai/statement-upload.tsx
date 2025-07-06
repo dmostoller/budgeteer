@@ -2,7 +2,11 @@
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { extractFileContent, isFileSupported, getFileTypeInfo } from "@/lib/file-extraction";
+import {
+  extractFileContent,
+  isFileSupported,
+  getFileTypeInfo,
+} from "@/lib/file-extraction";
 import {
   Card,
   CardContent,
@@ -50,7 +54,7 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
     if (acceptedFiles.length === 0) return;
 
     const file = acceptedFiles[0];
-    
+
     // Reset state to ensure clean processing
     setError(null);
     setTransactions([]);
@@ -60,7 +64,9 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
 
     // Validate file type
     if (!isFileSupported(file)) {
-      setError("Unsupported file type. Please upload a PDF, CSV, or image file.");
+      setError(
+        "Unsupported file type. Please upload a PDF, CSV, or image file.",
+      );
       setIsProcessing(false);
       setUploadProgress(0);
       return;
@@ -69,12 +75,12 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      
+
       const fileInfo = getFileTypeInfo(file);
       formData.append("fileType", fileInfo.type);
-      
+
       setUploadProgress(20);
-      
+
       // Try to extract content client-side for text files
       if (!fileInfo.requiresServerProcessing) {
         try {
@@ -102,22 +108,30 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
       }
 
       const data = await response.json();
-      
+
       if (!data.transactions || data.transactions.length === 0) {
-        throw new Error("No transactions found in the statement. Please ensure the file contains transaction data.");
+        throw new Error(
+          "No transactions found in the statement. Please ensure the file contains transaction data.",
+        );
       }
-      
+
       setTransactions(data.transactions);
       setShowReview(true);
       setUploadProgress(100);
 
-      const batchMessage = data.batchesProcessed > 1 
-        ? ` (processed in ${data.batchesProcessed} batches)` 
-        : '';
-      toast.success(`Found ${data.transactions.length} transactions to import${batchMessage}`);
+      const batchMessage =
+        data.batchesProcessed > 1
+          ? ` (processed in ${data.batchesProcessed} batches)`
+          : "";
+      toast.success(
+        `Found ${data.transactions.length} transactions to import${batchMessage}`,
+      );
     } catch (err) {
       console.error("Upload error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to process the bank statement";
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to process the bank statement";
       setError(errorMessage);
       toast.error(errorMessage);
       // Reset state on error
@@ -145,7 +159,9 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
       if (rejection.errors[0]?.code === "file-too-large") {
         setError("File is too large. Maximum size is 10MB.");
       } else if (rejection.errors[0]?.code === "file-invalid-type") {
-        setError("Invalid file type. Please upload a PDF, CSV, TXT, or image file.");
+        setError(
+          "Invalid file type. Please upload a PDF, CSV, TXT, or image file.",
+        );
       } else {
         setError("Failed to upload file. Please try again.");
       }
@@ -266,8 +282,8 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span>
-                {uploadProgress < 80 
-                  ? "Uploading and extracting content..." 
+                {uploadProgress < 80
+                  ? "Uploading and extracting content..."
                   : "Analyzing transactions..."}
               </span>
               <span>{uploadProgress}%</span>

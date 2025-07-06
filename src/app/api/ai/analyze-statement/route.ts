@@ -4,7 +4,11 @@ import { google } from "@ai-sdk/google";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { ExpenseCategory, IncomeCategory } from "@prisma/client";
-import { splitBankStatementContent, mergeBatchResults, type BatchResult } from "@/lib/bank-statement-utils";
+import {
+  splitBankStatementContent,
+  mergeBatchResults,
+  type BatchResult,
+} from "@/lib/bank-statement-utils";
 
 // Schema for parsed transactions
 const transactionSchema = z.object({
@@ -112,20 +116,22 @@ export async function POST(req: Request) {
     console.log(`Total content length: ${fileContent.length} characters`);
     const contentChunks = splitBankStatementContent(fileContent, 30); // 30 transactions per batch
     const batchResults: BatchResult[] = [];
-    
-    console.log(`Processing bank statement in ${contentChunks.length} batch(es)`);
+
+    console.log(
+      `Processing bank statement in ${contentChunks.length} batch(es)`,
+    );
     if (contentChunks.length > 1) {
       console.log(`Content split into batches due to transaction count`);
     }
-    
+
     // Process each chunk
     for (let i = 0; i < contentChunks.length; i++) {
       const chunk = contentChunks[i];
       const isFirstBatch = i === 0;
       const batchNumber = i + 1;
-      
+
       console.log(`Processing batch ${batchNumber} of ${contentChunks.length}`);
-      
+
       // Create context for the AI
       const systemPrompt = `
 You are a financial data extraction expert. Analyze the provided bank statement and extract all transactions.
@@ -141,9 +147,13 @@ For each transaction, determine:
 6. isRecurring (true if it appears to be a recurring transaction)
 7. merchantName (extract the merchant/company name if possible)
 
-${isFirstBatch ? `Existing transactions to check for duplicates:
+${
+  isFirstBatch
+    ? `Existing transactions to check for duplicates:
 Expenses: ${JSON.stringify(existingTransactions[0].slice(0, 10))}
-Income: ${JSON.stringify(existingTransactions[1].slice(0, 10))}` : ''}
+Income: ${JSON.stringify(existingTransactions[1].slice(0, 10))}`
+    : ""
+}
 
 Bank statement content (batch ${batchNumber} of ${contentChunks.length}):
 ${chunk}
@@ -164,21 +174,25 @@ Important:
           temperature: 0.3,
           maxTokens: 8000, // Limit output size per batch
         });
-        
+
         batchResults.push(response.object);
       } catch (error) {
         console.error(`Error processing batch ${batchNumber}:`, error);
         // Continue with other batches even if one fails
-        if (error instanceof Error && error.message.includes('JSON')) {
-          throw new Error(`Failed to process batch ${batchNumber}. The statement may be too complex. Try uploading a shorter date range.`);
+        if (error instanceof Error && error.message.includes("JSON")) {
+          throw new Error(
+            `Failed to process batch ${batchNumber}. The statement may be too complex. Try uploading a shorter date range.`,
+          );
         }
         throw error;
       }
     }
-    
+
     // Merge all batch results
     const mergedResult = mergeBatchResults(batchResults);
-    console.log(`Total transactions extracted: ${mergedResult.transactions.length}`);
+    console.log(
+      `Total transactions extracted: ${mergedResult.transactions.length}`,
+    );
 
     // Map AI categories to our enums
     const mapToExpenseCategory = (category: string): ExpenseCategory => {

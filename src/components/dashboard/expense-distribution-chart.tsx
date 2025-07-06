@@ -99,11 +99,11 @@ export function ExpenseDistributionChart({
                 cy="50%"
                 labelLine={false}
                 outerRadius={80}
-                innerRadius={40}
+                innerRadius={0}
                 fill="#8884d8"
                 dataKey="value"
                 nameKey="category"
-                paddingAngle={2}
+                paddingAngle={0}
               >
                 {data.map((entry, index) => (
                   <Cell

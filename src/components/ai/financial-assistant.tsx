@@ -21,6 +21,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 export function FinancialAssistant() {
   const {
@@ -88,9 +89,47 @@ export function FinancialAssistant() {
                 : "bg-muted max-w-[90%]",
             )}
           >
-            <span className="text-sm whitespace-pre-line">
-              {message.content}
-            </span>
+            <div className="text-sm markdown-content">
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <p className="mb-2 last:mb-0">{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="mb-2 ml-4 list-disc space-y-1">
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="mb-2 ml-4 list-decimal space-y-1">
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ children }) => <li className="ml-2">{children}</li>,
+                  strong: ({ children }) => (
+                    <strong className="font-semibold">{children}</strong>
+                  ),
+                  code: ({ children }) => {
+                    const bgClass =
+                      message.role === "user"
+                        ? "bg-primary-foreground/20"
+                        : "bg-muted/50";
+                    return (
+                      <code
+                        className={cn(
+                          "px-1.5 py-0.5 rounded font-mono text-xs",
+                          bgClass,
+                        )}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           </div>
         ))}
         {isLoading && (
@@ -142,8 +181,9 @@ export function FinancialAssistant() {
               <h4 className="text-sm font-medium mb-2">💡 Pro Tips</h4>
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>
-                  • Ask about specific time periods: &ldquo;last 3
-                  months&rdquo;, &ldquo;this year&rdquo;
+                  • Ask about any time period: &ldquo;last month&rdquo;,
+                  &ldquo;past 3 months&rdquo;, &ldquo;January&rdquo;,
+                  &ldquo;this year&rdquo;
                 </li>
                 <li>
                   • Add transactions quickly: &ldquo;spent $45 on gas&rdquo;

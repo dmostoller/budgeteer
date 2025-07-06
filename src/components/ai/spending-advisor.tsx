@@ -2,6 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import {
   Card,
   CardHeader,
@@ -83,9 +84,95 @@ export function SpendingAdvisor() {
                 : "bg-muted",
             )}
           >
-            <span className="text-sm whitespace-pre-line">
-              {message.content}
-            </span>
+            <div className="text-sm markdown-content">
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <p className="mb-3 last:mb-0">{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="mb-3 ml-4 list-disc space-y-1">
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="mb-3 ml-4 list-decimal space-y-1">
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ children }) => <li className="ml-2">{children}</li>,
+                  h1: ({ children }) => (
+                    <h1 className="text-lg font-bold mb-3 mt-4 first:mt-0">
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-sm font-semibold mb-2 mt-3 first:mt-0">
+                      {children}
+                    </h3>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold">{children}</strong>
+                  ),
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  code: ({ children }) => {
+                    const bgClass =
+                      message.role === "user"
+                        ? "bg-primary-foreground/20"
+                        : "bg-muted/50";
+                    return (
+                      <code
+                        className={cn(
+                          "px-1.5 py-0.5 rounded font-mono text-xs",
+                          bgClass,
+                        )}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                  pre: ({ children }) => {
+                    const bgClass =
+                      message.role === "user"
+                        ? "bg-primary-foreground/20"
+                        : "bg-muted/50";
+                    return (
+                      <pre
+                        className={cn(
+                          "p-3 rounded-md overflow-x-auto mb-3 text-xs",
+                          bgClass,
+                        )}
+                      >
+                        {children}
+                      </pre>
+                    );
+                  },
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-2 border-muted-foreground/20 pl-4 italic mb-3">
+                      {children}
+                    </blockquote>
+                  ),
+                  a: ({ children, href }) => (
+                    <a
+                      href={href}
+                      className="text-primary hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {children}
+                    </a>
+                  ),
+                  hr: () => <hr className="my-4 border-muted" />,
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           </div>
         ))}
         {error && (
