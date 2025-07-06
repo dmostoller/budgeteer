@@ -4,6 +4,11 @@ import { ExpenseDistributionChart } from "@/components/dashboard/expense-distrib
 import { SavingsTrendChart } from "@/components/dashboard/savings-trend-chart";
 import { UpcomingPayments } from "@/components/dashboard/upcoming-payments";
 import { DashboardDateRange } from "@/components/dashboard/dashboard-date-range";
+import { IncomeDistributionChart } from "@/components/dashboard/income-distribution-chart";
+import { CashFlowWaterfallChart } from "@/components/dashboard/cash-flow-waterfall-chart";
+import { RecurringAnalysisChart } from "@/components/dashboard/recurring-analysis-chart";
+import { CategoryTrendChart } from "@/components/dashboard/category-trend-chart";
+import { SubscriptionAnalytics } from "@/components/dashboard/subscription-analytics";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
 import {
@@ -232,6 +237,239 @@ async function fetchDashboardData(
     }),
   );
 
+  // Income distribution by category
+  const incomeByCategory = await prisma.income.groupBy({
+    by: ["category"],
+    where: {
+      userId,
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  const incomeDistribution = incomeByCategory.map((item) => ({
+    category: item.category,
+    value: Number(item._sum.amount || 0),
+  }));
+
+  // Recurring vs One-time Analysis
+  const recurringAnalysisData = [];
+  for (const month of months) {
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+    const monthName = format(month, "MMM yyyy");
+
+    const recurringIncome = await prisma.income.aggregate({
+      where: {
+        userId,
+        date: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+        isRecurring: true,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const oneTimeIncome = await prisma.income.aggregate({
+      where: {
+        userId,
+        date: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+        isRecurring: false,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const recurringExpenses = await prisma.expense.aggregate({
+      where: {
+        userId,
+        date: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+        isRecurring: true,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const oneTimeExpenses = await prisma.expense.aggregate({
+      where: {
+        userId,
+        date: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+        isRecurring: false,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    recurringAnalysisData.push({
+      month: monthName,
+      recurringIncome: Number(recurringIncome._sum.amount || 0),
+      oneTimeIncome: Number(oneTimeIncome._sum.amount || 0),
+      recurringExpenses: Number(recurringExpenses._sum.amount || 0),
+      oneTimeExpenses: Number(oneTimeExpenses._sum.amount || 0),
+    });
+  }
+
+  // Category Trends (top 5 expense categories)
+  const topCategories = await prisma.expense.groupBy({
+    by: ["category"],
+    where: {
+      userId,
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    _sum: {
+      amount: true,
+    },
+    orderBy: {
+      _sum: {
+        amount: "desc",
+      },
+    },
+    take: 5,
+  });
+
+  const categoryList = topCategories.map((cat) => cat.category);
+  const categoryTrendData: Array<{
+    month: string;
+    [key: string]: string | number;
+  }> = [];
+
+  for (const month of months) {
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+    const monthName = format(month, "MMM yyyy");
+
+    const monthData: { month: string; [key: string]: string | number } = {
+      month: monthName,
+    };
+
+    for (const category of categoryList) {
+      const categoryExpenses = await prisma.expense.aggregate({
+        where: {
+          userId,
+          category,
+          date: {
+            gte: monthStart,
+            lte: monthEnd,
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+      monthData[category] = Number(categoryExpenses._sum.amount || 0);
+    }
+
+    categoryTrendData.push(monthData);
+  }
+
+  // Subscription Analytics
+  const activeSubscriptions = await prisma.subscription.findMany({
+    where: {
+      userId,
+      isActive: true,
+    },
+  });
+
+  let totalMonthlySubscriptions = 0;
+  let totalYearlySubscriptions = 0;
+
+  activeSubscriptions.forEach((sub) => {
+    if (sub.billingCycle === "MONTHLY") {
+      totalMonthlySubscriptions += Number(sub.amount);
+    } else if (sub.billingCycle === "YEARLY") {
+      totalYearlySubscriptions += Number(sub.amount);
+    }
+  });
+
+  const thirtyDaysFromToday = new Date(today);
+  thirtyDaysFromToday.setDate(today.getDate() + 30);
+
+  const upcomingSubscriptionRenewals = await prisma.subscription.findMany({
+    where: {
+      userId,
+      isActive: true,
+      nextPaymentDate: {
+        gte: today,
+        lte: thirtyDaysFromToday,
+      },
+    },
+    orderBy: {
+      nextPaymentDate: "asc",
+    },
+    select: {
+      name: true,
+      amount: true,
+      nextPaymentDate: true,
+    },
+  });
+
+  const activeSubscriptionsByCategory = await prisma.subscription.groupBy({
+    by: ["category"],
+    where: {
+      userId,
+      isActive: true,
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  const subscriptionCategoryBreakdown = activeSubscriptionsByCategory.map(
+    (cat) => ({
+      category: cat.category,
+      amount: Number(cat._sum.amount || 0),
+    }),
+  );
+
+  const subscriptionData = {
+    totalMonthly: totalMonthlySubscriptions,
+    totalYearly: totalYearlySubscriptions,
+    activeCount: activeSubscriptions.length,
+    upcomingRenewals: upcomingSubscriptionRenewals.map((renewal) => ({
+      name: renewal.name,
+      amount: Number(renewal.amount),
+      date: renewal.nextPaymentDate,
+    })),
+    categoryBreakdown: subscriptionCategoryBreakdown,
+  };
+
+  // Prepare cash flow data
+  const incomeCashFlow = incomeByCategory.map((item) => ({
+    category: item.category,
+    amount: Number(item._sum.amount || 0),
+    type: "income" as const,
+  }));
+
+  const expenseCashFlow = expenseDistributionCombined.map((item) => ({
+    category: item.category,
+    amount: item.value,
+    type: "expense" as const,
+  }));
+
   return {
     dateRange: {
       startDate,
@@ -245,6 +483,17 @@ async function fetchDashboardData(
     monthlyData,
     upcomingPayments,
     expenseDistribution: expenseDistributionWithPercent,
+    incomeDistribution,
+    recurringAnalysis: recurringAnalysisData,
+    categoryTrends: {
+      categories: categoryList,
+      data: categoryTrendData,
+    },
+    subscriptionAnalytics: subscriptionData,
+    cashFlowData: {
+      income: incomeCashFlow,
+      expenses: expenseCashFlow,
+    },
   };
 }
 
@@ -292,15 +541,37 @@ export default async function DashboardPage({
         endDate={dashboardData.dateRange.endDate}
       />
 
-      {/* First row of charts - Income/Expense Bar Chart and Upcoming Payments */}
-
-      {/* Second row of charts - Expense Distribution and Savings Trend */}
+      {/* Core Financial Charts */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         <IncomeExpenseChart data={dashboardData.monthlyData} />
         <ExpenseDistributionChart data={dashboardData.expenseDistribution} />
-        <SavingsTrendChart data={dashboardData.monthlyData} />
+        <IncomeDistributionChart data={dashboardData.incomeDistribution} />
       </div>
-      <UpcomingPayments payments={dashboardData.upcomingPayments} />
+
+      {/* Income and Cash Flow Analysis */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <SavingsTrendChart data={dashboardData.monthlyData} />
+        <CashFlowWaterfallChart
+          startBalance={0}
+          incomeByCategory={dashboardData.cashFlowData.income}
+          expensesByCategory={dashboardData.cashFlowData.expenses}
+        />
+      </div>
+
+      {/* Recurring and Category Analysis */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+        <RecurringAnalysisChart data={dashboardData.recurringAnalysis} />
+        <CategoryTrendChart
+          data={dashboardData.categoryTrends.data}
+          categories={dashboardData.categoryTrends.categories}
+        />
+      </div>
+
+      {/* Subscriptions and Upcoming Payments */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <SubscriptionAnalytics data={dashboardData.subscriptionAnalytics} />
+        <UpcomingPayments payments={dashboardData.upcomingPayments} />
+      </div>
     </div>
   );
 }

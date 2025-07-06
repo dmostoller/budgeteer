@@ -16,20 +16,20 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-type ExpenseDistribution = {
+type IncomeDistribution = {
   category: string;
   value: number;
 };
 
-interface ExpenseDistributionChartProps {
-  data: ExpenseDistribution[];
+interface IncomeDistributionChartProps {
+  data: IncomeDistribution[];
   className?: string;
 }
 
-export function ExpenseDistributionChart({
+export function IncomeDistributionChart({
   data,
   className,
-}: ExpenseDistributionChartProps) {
+}: IncomeDistributionChartProps) {
   // Calculate total for percentage
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
@@ -57,8 +57,8 @@ export function ExpenseDistributionChart({
   return (
     <Card className={className}>
       <CardHeader className="items-center pb-0">
-        <CardTitle>Expense Distribution</CardTitle>
-        <CardDescription>Breakdown of expenses by category</CardDescription>
+        <CardTitle>Income Distribution</CardTitle>
+        <CardDescription>Breakdown of income by source</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
