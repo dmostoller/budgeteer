@@ -1,5 +1,7 @@
 "use client";
 
+import { Pie, PieChart } from "recharts";
+
 import {
   Card,
   CardContent,
@@ -8,13 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from "recharts";
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 type ExpenseDistribution = {
   category: string;
@@ -26,101 +26,82 @@ interface ExpenseDistributionChartProps {
   className?: string;
 }
 
-// Color palette for the pie chart segments
-const COLORS = [
-  "hsl(343deg 81% 75%)", // Red
-  "hsl(166deg 77% 77%)", // Teal
-  "hsl(189deg 70% 80%)", // Blue
-  "hsl(249deg 34% 84%)", // Lavender
-  "hsl(284deg 24% 82%)", // Purple
-  "hsl(23deg 92% 84%)", // Orange
-  "hsl(41deg 88% 83%)", // Yellow
-  "hsl(115deg 54% 76%)", // Green
-  "hsl(214deg 30% 78%)", // Grey Blue
-  "hsl(353deg 30% 78%)", // Pink
-];
-
 export function ExpenseDistributionChart({
   data,
   className,
 }: ExpenseDistributionChartProps) {
-  // Currency formatter for tooltip
-  const currencyFormatter = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+  // Calculate total for percentage
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+
+  // Create a ChartConfig object dynamically from the data
+  const chartConfig = data.reduce((acc, item, index) => {
+    acc[item.category] = {
+      label: item.category,
+      color: `var(--chart-${(index % 5) + 1})`,
+    };
+    return acc;
+  }, {} as ChartConfig);
+
+  // Add value config for tooltip label
+  chartConfig.value = {
+    label: "Amount",
   };
 
-  // Custom tooltip
-  const CustomTooltip = ({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: Array<{
-      name: string;
-      value: number;
-      color: string;
-      payload: { percent: number };
-    }>;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background border rounded-md p-3 shadow-md">
-          <p className="font-medium mb-1">{payload[0].name}</p>
-          <p style={{ color: payload[0].color }}>
-            {currencyFormatter(payload[0].value)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {Math.round(payload[0].payload.percent * 100)}% of total
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Prepare chart data with fill colors and percentage
+  const chartData = data.map((item, index) => ({
+    ...item,
+    fill: `var(--chart-${(index % 5) + 1})`,
+    percent: item.value / total,
+  }));
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader className="items-center pb-0">
         <CardTitle>Expense Distribution</CardTitle>
         <CardDescription>Breakdown of expenses by category</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={80}
-                innerRadius={0}
-                fill="#8884d8"
-                dataKey="value"
-                nameKey="category"
-                paddingAngle={0}
-              >
-                {data.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                layout="horizontal"
-                verticalAlign="bottom"
-                align="center"
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <CardContent className="flex-1 pb-0">
+        <ChartContainer
+          config={chartConfig}
+          className="mx-auto aspect-square max-h-[300px]"
+        >
+          <PieChart>
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="category"
+              cx="50%"
+              cy="50%"
+              outerRadius={120}
+              fill="#8884d8"
+            />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  hideLabel
+                  formatter={(value, name, item) => (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm mb-1">{name}</span>
+                      <span className="font-medium">
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        }).format(value as number)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round((item.payload.percent as number) * 100)}% of
+                        total
+                      </span>
+                    </div>
+                  )}
+                  nameKey="category"
+                />
+              }
+            />
+          </PieChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

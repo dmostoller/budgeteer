@@ -1,5 +1,7 @@
 "use client";
 
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
 import {
   Card,
   CardContent,
@@ -8,15 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
 
 type MonthlyData = {
   month: string;
@@ -29,12 +29,22 @@ interface IncomeExpenseChartProps {
   className?: string;
 }
 
+const chartConfig = {
+  income: {
+    label: "Income",
+    color: "var(--chart-1)",
+  },
+  expenses: {
+    label: "Expenses",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig;
+
 export function IncomeExpenseChart({
   data,
   className,
 }: IncomeExpenseChartProps) {
-
-  // Currency formatter for tooltip
+  // Currency formatter for Y-axis and tooltip
   const currencyFormatter = (value: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -42,35 +52,6 @@ export function IncomeExpenseChart({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
-  };
-
-  // Custom tooltip
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: {
-      value: number;
-      name: string;
-      color: string;
-    }[];
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background border rounded-md p-3 shadow-md">
-          <p className="font-medium mb-1">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {currencyFormatter(entry.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
   };
 
   return (
@@ -82,32 +63,48 @@ export function IncomeExpenseChart({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={currencyFormatter} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar
-                dataKey="income"
-                name="Income"
-                fill="hsl(115deg 54% 76%)" // Catppuccin Green
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="expenses"
-                name="Expenses"
-                fill="hsl(343deg 81% 75%)" // Catppuccin Red
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+          <BarChart
+            accessibilityLayer
+            data={data}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => value.slice(0, 3)}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={10}
+              tickFormatter={currencyFormatter}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  formatter={(value) => currencyFormatter(value as number)}
+                  indicator="dashed"
+                />
+              }
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+            <Bar
+              dataKey="income"
+              fill="var(--color-income)"
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar
+              dataKey="expenses"
+              fill="var(--color-expenses)"
+              radius={[4, 4, 0, 0]}
+            />
+          </BarChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

@@ -1,9 +1,6 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
-import { ExpenseTable } from "@/components/tables/expense-table";
+import { SpendingContent } from "./spending-content";
 
 export const dynamic = "force-dynamic";
 
@@ -29,17 +26,5 @@ export default async function SpendingPage() {
     amount: expense.amount.toNumber(),
   }));
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Spending</h1>
-        <Link href="/dashboard/spending/new" passHref>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Expense
-          </Button>
-        </Link>
-      </div>
-      <ExpenseTable data={serializedExpenses} />
-    </div>
-  );
+  return <SpendingContent expenses={serializedExpenses} />;
 }

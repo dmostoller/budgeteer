@@ -4,9 +4,6 @@ import { ExpenseDistributionChart } from "@/components/dashboard/expense-distrib
 import { SavingsTrendChart } from "@/components/dashboard/savings-trend-chart";
 import { UpcomingPayments } from "@/components/dashboard/upcoming-payments";
 import { DashboardDateRange } from "@/components/dashboard/dashboard-date-range";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
 import {
@@ -274,22 +271,9 @@ export default async function DashboardPage({
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <div className="flex space-x-2">
-            <Link href="/dashboard/income/new">
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Income
-              </Button>
-            </Link>
-            <Link href="/dashboard/spending/new">
-              <Button variant="outline">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Expense
-              </Button>
-            </Link>
-          </div>
+
+          <DashboardDateRange />
         </div>
-        <DashboardDateRange />
       </div>
 
       <SummaryStats
