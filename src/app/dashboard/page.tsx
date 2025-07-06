@@ -559,17 +559,17 @@ export default async function DashboardPage({
       </div>
 
       {/* Recurring and Category Analysis */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
         <RecurringAnalysisChart data={dashboardData.recurringAnalysis} />
         <CategoryTrendChart
           data={dashboardData.categoryTrends.data}
           categories={dashboardData.categoryTrends.categories}
         />
+        <SubscriptionAnalytics data={dashboardData.subscriptionAnalytics} />
       </div>
 
       {/* Subscriptions and Upcoming Payments */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-        <SubscriptionAnalytics data={dashboardData.subscriptionAnalytics} />
+      <div className="grid gap-4 grid-cols-1">
         <UpcomingPayments payments={dashboardData.upcomingPayments} />
       </div>
     </div>
