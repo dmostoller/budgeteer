@@ -19,11 +19,11 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
-  HomeIcon,
-  DollarSign,
-  Receipt,
-  CalendarIcon,
-  CreditCard,
+  LayoutDashboard,
+  CalendarDays,
+  CalendarSync,
+  BanknoteArrowDown,
+  BanknoteArrowUp,
   Sparkles,
 } from "lucide-react";
 import Image from "next/image";
@@ -38,16 +38,20 @@ export const metadata: Metadata = {
 
 // Define navigation items
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
-  { href: "/dashboard/income", label: "Income", icon: DollarSign },
-  { href: "/dashboard/spending", label: "Spending", icon: Receipt },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/income", label: "Income", icon: BanknoteArrowUp },
+  { href: "/dashboard/spending", label: "Spending", icon: BanknoteArrowDown },
   {
     href: "/dashboard/subscriptions",
     label: "Subscriptions",
-    icon: CreditCard,
+    icon: CalendarSync,
   },
-  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarIcon },
-  { href: "/dashboard/advisor", label: "AI Advisor", icon: Sparkles },
+  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
+  {
+    href: "/dashboard/advisor?tab=assistant",
+    label: "AI Advisor",
+    icon: Sparkles,
+  },
 ];
 
 export default async function DashboardLayout({

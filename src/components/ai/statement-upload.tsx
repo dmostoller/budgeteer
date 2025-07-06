@@ -111,7 +111,10 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
       setShowReview(true);
       setUploadProgress(100);
 
-      toast.success(`Found ${data.transactions.length} transactions to import`);
+      const batchMessage = data.batchesProcessed > 1 
+        ? ` (processed in ${data.batchesProcessed} batches)` 
+        : '';
+      toast.success(`Found ${data.transactions.length} transactions to import${batchMessage}`);
     } catch (err) {
       console.error("Upload error:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to process the bank statement";
@@ -262,10 +265,19 @@ export function StatementUpload({ onImportComplete }: StatementUploadProps) {
         {isProcessing && (
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span>Processing statement...</span>
+              <span>
+                {uploadProgress < 80 
+                  ? "Uploading and extracting content..." 
+                  : "Analyzing transactions..."}
+              </span>
               <span>{uploadProgress}%</span>
             </div>
             <Progress value={uploadProgress} />
+            {uploadProgress >= 80 && (
+              <p className="text-xs text-muted-foreground text-center">
+                Large statements may be processed in multiple batches
+              </p>
+            )}
           </div>
         )}
 

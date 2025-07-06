@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Breadcrumb,
@@ -14,6 +14,7 @@ import {
 
 export function DashboardBreadcrumbs() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const pathSegments = pathname.split("/").filter((segment) => segment);
 
   // Map of path segments to display names
@@ -25,13 +26,24 @@ export function DashboardBreadcrumbs() {
     calendar: "Calendar",
     advisor: "AI Advisor",
   };
+  
+  // Map of advisor tab values to display names
+  const advisorTabNames: Record<string, string> = {
+    assistant: "Assistant",
+    import: "Import",
+    advisor: "Advisor",
+  };
+
+  // Check if we're on the advisor page and have a tab param
+  const isAdvisorPage = pathname === "/dashboard/advisor";
+  const activeTab = isAdvisorPage ? searchParams.get("tab") || "assistant" : null;
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
         {pathSegments.map((segment, index) => {
           const href = "/" + pathSegments.slice(0, index + 1).join("/");
-          const isLast = index === pathSegments.length - 1;
+          const isLast = index === pathSegments.length - 1 && !activeTab;
           const displayName = segmentNames[segment] || segment;
 
           return (
@@ -45,10 +57,17 @@ export function DashboardBreadcrumbs() {
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
-              {!isLast && <BreadcrumbSeparator />}
+              {(!isLast || activeTab) && <BreadcrumbSeparator />}
             </React.Fragment>
           );
         })}
+        
+        {/* Add tab breadcrumb for advisor page */}
+        {activeTab && (
+          <BreadcrumbItem>
+            <BreadcrumbPage>{advisorTabNames[activeTab] || activeTab}</BreadcrumbPage>
+          </BreadcrumbItem>
+        )}
       </BreadcrumbList>
     </Breadcrumb>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { SpendingAdvisor } from "@/components/ai/spending-advisor";
 import { FinancialAssistant } from "@/components/ai/financial-assistant";
 import { StatementUpload } from "@/components/ai/statement-upload";
@@ -13,18 +13,34 @@ import {
 } from "lucide-react";
 
 export default function AdvisorPage() {
-  const [activeTab, setActiveTab] = useState("assistant");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Get the active tab from URL params, default to "assistant"
+  const activeTab = searchParams.get("tab") || "assistant";
+
+  // Handle tab change by updating URL
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", value);
+    router.push(`/dashboard/advisor?${params.toString()}`);
+  };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="w-full mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">AI Financial Hub</h1>
         <p className="text-muted-foreground">
-          Your intelligent financial assistant - analyze, import, and manage your finances with AI
+          Your intelligent financial assistant - analyze, import, and manage
+          your finances with AI
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="assistant" className="flex items-center gap-2">
             <BrainCircuit className="h-4 w-4" />
@@ -52,23 +68,32 @@ export default function AdvisorPage() {
                   Natural Language Finance
                 </h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Chat naturally with your financial data. Ask questions, add transactions,
-                  and get insights using everyday language.
+                  Chat naturally with your financial data. Ask questions, add
+                  transactions, and get insights using everyday language.
                 </p>
                 <div className="space-y-2">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase">Examples:</h3>
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase">
+                    Examples:
+                  </h3>
                   <ul className="text-sm space-y-1">
                     <li className="flex items-start gap-2">
                       <span className="text-primary">•</span>
-                      <span>&ldquo;How much did I spend last month?&rdquo;</span>
+                      <span>
+                        &ldquo;How much did I spend last month?&rdquo;
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary">•</span>
-                      <span>&ldquo;Add $45 grocery expense from yesterday&rdquo;</span>
+                      <span>
+                        &ldquo;Add $45 grocery expense from yesterday&rdquo;
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary">•</span>
-                      <span>&ldquo;What&apos;s my most expensive subscription?&rdquo;</span>
+                      <span>
+                        &ldquo;What&apos;s my most expensive
+                        subscription?&rdquo;
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -77,9 +102,9 @@ export default function AdvisorPage() {
               <div className="bg-primary/5 rounded-xl border border-primary/20 p-6">
                 <h3 className="font-semibold mb-2">🚀 Quick Actions</h3>
                 <p className="text-sm text-muted-foreground">
-                  The assistant can help you add transactions instantly.
-                  Just type naturally like &ldquo;spent $30 on lunch&rdquo; and it will
-                  create the expense for you!
+                  The assistant can help you add transactions instantly. Just
+                  type naturally like &ldquo;spent $30 on lunch&rdquo; and it
+                  will create the expense for you!
                 </p>
               </div>
             </div>
@@ -92,7 +117,7 @@ export default function AdvisorPage() {
               <StatementUpload
                 onImportComplete={() => {
                   // Could refresh data or show success message
-                  setActiveTab("assistant");
+                  handleTabChange("assistant");
                 }}
               />
             </div>
@@ -133,9 +158,11 @@ export default function AdvisorPage() {
               <div className="bg-card rounded-xl border p-6 shadow-sm">
                 <h2 className="font-semibold mb-4">About the AI Advisor</h2>
                 <p className="text-sm text-muted-foreground">
-                  The AI Spending Advisor analyzes your financial data to provide personalized recommendations
-                  on how you can save money and optimize your budget. It examines your spending patterns,
-                  subscriptions, and recurring expenses to identify potential savings opportunities.
+                  The AI Spending Advisor analyzes your financial data to
+                  provide personalized recommendations on how you can save money
+                  and optimize your budget. It examines your spending patterns,
+                  subscriptions, and recurring expenses to identify potential
+                  savings opportunities.
                 </p>
               </div>
 
