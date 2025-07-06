@@ -28,9 +28,14 @@ export async function GET(req: NextRequest) {
       const today = new Date();
       const futureDate = new Date();
       futureDate.setDate(today.getDate() + daysAhead);
-      
+
+      // Only show payments from 7 days ago to daysAhead in the future
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(today.getDate() - 7);
+
       dateFilter = {
         nextPaymentDate: {
+          gte: sevenDaysAgo,
           lte: futureDate,
         },
       };
@@ -39,6 +44,7 @@ export async function GET(req: NextRequest) {
     const subscriptions = await prisma.subscription.findMany({
       where: {
         userId: session.user.id,
+        isActive: true, // Only show active subscriptions
         ...dateFilter,
       },
       orderBy: {
@@ -51,7 +57,7 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching subscriptions:", error);
     return NextResponse.json(
       { error: "Failed to fetch subscriptions" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -83,7 +89,7 @@ export async function POST(req: NextRequest) {
     console.error("Error creating subscription:", error);
     return NextResponse.json(
       { error: "Failed to create subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

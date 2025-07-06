@@ -14,12 +14,12 @@ export const dynamic = "force-dynamic";
 async function fetchCalendarEvents(userId: string, dateParam?: string) {
   // Use the provided date or default to today
   let baseDate = new Date();
-  
+
   // Validate the date parameter
   if (dateParam) {
     // Parse the date string safely
     const parsedDate = new Date(dateParam);
-    
+
     // Check if it's a valid date
     if (!isNaN(parsedDate.getTime())) {
       baseDate = parsedDate;
@@ -41,7 +41,7 @@ async function fetchCalendarEvents(userId: string, dateParam?: string) {
       isRecurring: false,
     },
   });
-  
+
   // Fetch recurring incomes
   const recurringIncomes = await prisma.income.findMany({
     where: {
@@ -49,14 +49,14 @@ async function fetchCalendarEvents(userId: string, dateParam?: string) {
       isRecurring: true,
     },
   });
-  
+
   // Generate recurring income events based on frequency
   const recurringIncomeEvents = [];
-  
+
   for (const income of recurringIncomes) {
     // The base date is the stored date
     const baseDate = new Date(income.date);
-    
+
     // Generate events based on recurrence period
     if (income.recurrencePeriod === "DAILY") {
       // Generate daily events for the entire range
@@ -153,7 +153,7 @@ async function fetchCalendarEvents(userId: string, dateParam?: string) {
       }
     }
   }
-  
+
   // Combine regular and recurring incomes
   const incomes = [...regularIncomes, ...recurringIncomeEvents];
 
@@ -168,7 +168,7 @@ async function fetchCalendarEvents(userId: string, dateParam?: string) {
       isRecurring: false,
     },
   });
-  
+
   // Fetch recurring expenses
   const recurringExpenses = await prisma.expense.findMany({
     where: {
@@ -176,14 +176,14 @@ async function fetchCalendarEvents(userId: string, dateParam?: string) {
       isRecurring: true,
     },
   });
-  
+
   // Generate recurring expense events based on frequency
   const recurringExpenseEvents = [];
-  
+
   for (const expense of recurringExpenses) {
     // The base date is the stored date
     const baseDate = new Date(expense.date);
-    
+
     // Generate events based on recurrence period
     if (expense.recurrencePeriod === "DAILY") {
       // Generate daily events for the entire range
@@ -280,7 +280,7 @@ async function fetchCalendarEvents(userId: string, dateParam?: string) {
       }
     }
   }
-  
+
   // Combine regular and recurring expenses
   const expenses = [...regularExpenses, ...recurringExpenseEvents];
 

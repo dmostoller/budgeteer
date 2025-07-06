@@ -101,12 +101,17 @@ async function fetchDashboardData(
   const twoWeeksLater = new Date(today);
   twoWeeksLater.setDate(today.getDate() + 14);
 
+  // Only show payments from 7 days ago to 14 days in the future
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
   // Get upcoming recurring expenses
   const recurringExpenses = await prisma.expense.findMany({
     where: {
       userId,
       isRecurring: true,
       date: {
+        gte: sevenDaysAgo,
         lte: twoWeeksLater,
       },
     },
@@ -122,11 +127,13 @@ async function fetchDashboardData(
     take: 5,
   });
 
-  // Get upcoming subscriptions
+  // Get upcoming subscriptions (only active ones)
   const upcomingSubscriptions = await prisma.subscription.findMany({
     where: {
       userId,
+      isActive: true,
       nextPaymentDate: {
+        gte: sevenDaysAgo,
         lte: twoWeeksLater,
       },
     },
@@ -135,6 +142,7 @@ async function fetchDashboardData(
       name: true,
       amount: true,
       nextPaymentDate: true,
+      lastPaymentDate: true,
     },
     orderBy: {
       nextPaymentDate: "asc",

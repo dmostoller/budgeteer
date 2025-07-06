@@ -1,6 +1,13 @@
 "use client";
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis, ReferenceLine } from "recharts";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+  ReferenceLine,
+} from "recharts";
 
 import {
   Card,
@@ -93,10 +100,10 @@ export function SavingsTrendChart({ data, className }: SavingsTrendChartProps) {
                 />
               }
             />
-            <ReferenceLine 
-              y={0} 
-              stroke="hsl(var(--muted-foreground))" 
-              strokeDasharray="3 3" 
+            <ReferenceLine
+              y={0}
+              stroke="hsl(var(--muted-foreground))"
+              strokeDasharray="3 3"
               opacity={0.5}
             />
             <Line

@@ -11,10 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ExpenseTable } from "@/components/tables/expense-table";
+import { ExpenseTable, Expense } from "@/components/tables/expense-table";
 
 interface SpendingContentProps {
-  expenses: any[];
+  expenses: Expense[];
 }
 
 export function SpendingContent({ expenses }: SpendingContentProps) {

@@ -13,14 +13,14 @@ export async function GET(req: NextRequest) {
     // Get query parameters
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date"); // Format: YYYY-MM
-    
+
     let targetDate = new Date();
     if (dateParam) {
       // Parse date from YYYY-MM format
       const [year, month] = dateParam.split("-").map(Number);
       targetDate = new Date(year, month - 1); // month is 0-indexed
     }
-    
+
     // Fetch data for a 3-month range centered on the target month
     const rangeStart = startOfMonth(subMonths(targetDate, 1));
     const rangeEnd = endOfMonth(addMonths(targetDate, 1));
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 
     // Transform data into calendar events
     const events = [
-      ...incomes.map(income => ({
+      ...incomes.map((income) => ({
         id: `income-${income.id}`,
         title: income.source,
         start: income.date,
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
         category: income.category,
         amount: Number(income.amount),
       })),
-      ...expenses.map(expense => ({
+      ...expenses.map((expense) => ({
         id: `expense-${expense.id}`,
         title: expense.description,
         start: expense.date,
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
         category: expense.category,
         amount: Number(expense.amount),
       })),
-      ...subscriptions.map(subscription => ({
+      ...subscriptions.map((subscription) => ({
         id: `subscription-${subscription.id}`,
         title: subscription.name,
         start: subscription.nextPaymentDate,
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching calendar events:", error);
     return NextResponse.json(
       { error: "Failed to fetch calendar events" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

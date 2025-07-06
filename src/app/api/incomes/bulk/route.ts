@@ -12,7 +12,7 @@ const bulkIncomeSchema = z.object({
       category: z.nativeEnum(IncomeCategory),
       isRecurring: z.boolean().optional(),
       recurrencePeriod: z.nativeEnum(RecurrencePeriod).optional(),
-    })
+    }),
   ),
 });
 
@@ -39,10 +39,12 @@ export async function POST(req: Request) {
             date: new Date(income.date),
             category: income.category,
             isRecurring: income.isRecurring || false,
-            recurrencePeriod: income.isRecurring ? income.recurrencePeriod : null,
+            recurrencePeriod: income.isRecurring
+              ? income.recurrencePeriod
+              : null,
           },
-        })
-      )
+        }),
+      ),
     );
 
     return new Response(
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   } catch (error) {
     console.error("[BULK-INCOMES-ERROR]", error);

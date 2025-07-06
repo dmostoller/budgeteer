@@ -59,9 +59,7 @@ export function SummaryStats({
           <div className="text-2xl font-bold text-destructive">
             {formatCurrency(totalExpenses)}
           </div>
-          <CardDescription className="pt-1">
-            Total Expenses
-          </CardDescription>
+          <CardDescription className="pt-1">Total Expenses</CardDescription>
         </CardContent>
       </Card>
 
@@ -80,9 +78,7 @@ export function SummaryStats({
           >
             {formatCurrency(netBalance)}
           </div>
-          <CardDescription className="pt-1">
-            {dateRangeString}
-          </CardDescription>
+          <CardDescription className="pt-1">{dateRangeString}</CardDescription>
         </CardContent>
       </Card>
     </div>

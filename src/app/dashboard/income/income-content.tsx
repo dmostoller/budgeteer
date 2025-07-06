@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/select";
 import { IncomeTable } from "@/components/tables/income-table";
 
+import { Income } from "@/components/tables/income-table";
+
 interface IncomeContentProps {
-  incomes: any[];
+  incomes: Income[];
 }
 
 export function IncomeContent({ incomes }: IncomeContentProps) {

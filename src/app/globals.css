@@ -64,7 +64,7 @@
   --border: hsl(233deg 12% 75%); /* Light version of Surface 2 */
   --input: hsl(233deg 12% 75%); /* Light version of Surface 2 */
   --ring: hsl(199deg 76% 69%); /* Sapphire */
-  
+
   /* Chart colors using Catppuccin palette */
   --chart-1: hsl(115deg 54% 76%); /* Green */
   --chart-2: hsl(199deg 76% 69%); /* Sapphire */
@@ -121,7 +121,6 @@
   --sidebar-border: hsl(233deg 12% 39%); /* Surface 2 */
   --sidebar-ring: hsl(199deg 76% 69%); /* Sapphire */
 }
-
 
 @layer base {
   * {

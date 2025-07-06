@@ -49,15 +49,10 @@ export function UserAvatar({ user }: UserAvatarProps) {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <div className="flex flex-col space-y-1 p-2">
           <p className="text-sm font-medium">{user.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {user.email}
-          </p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onClick={handleSignOut}
-        >
+        <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>

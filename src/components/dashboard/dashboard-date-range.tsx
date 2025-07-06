@@ -12,12 +12,12 @@ export function DashboardDateRange() {
   // Get date range from URL params or use defaults
   const defaultFrom = startOfMonth(subMonths(new Date(), 2));
   const defaultTo = endOfMonth(new Date());
-  
-  const fromDate = searchParams.get("from") 
-    ? new Date(searchParams.get("from")!) 
+
+  const fromDate = searchParams.get("from")
+    ? new Date(searchParams.get("from")!)
     : defaultFrom;
-  const toDate = searchParams.get("to") 
-    ? new Date(searchParams.get("to")!) 
+  const toDate = searchParams.get("to")
+    ? new Date(searchParams.get("to")!)
     : defaultTo;
 
   const dateRange: DateRange = {

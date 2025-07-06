@@ -12,7 +12,7 @@ const bulkExpenseSchema = z.object({
       category: z.nativeEnum(ExpenseCategory),
       isRecurring: z.boolean().optional(),
       recurrencePeriod: z.nativeEnum(RecurrencePeriod).optional(),
-    })
+    }),
   ),
 });
 
@@ -39,10 +39,12 @@ export async function POST(req: Request) {
             date: new Date(expense.date),
             category: expense.category,
             isRecurring: expense.isRecurring || false,
-            recurrencePeriod: expense.isRecurring ? expense.recurrencePeriod : null,
+            recurrencePeriod: expense.isRecurring
+              ? expense.recurrencePeriod
+              : null,
           },
-        })
-      )
+        }),
+      ),
     );
 
     return new Response(
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   } catch (error) {
     console.error("[BULK-EXPENSES-ERROR]", error);

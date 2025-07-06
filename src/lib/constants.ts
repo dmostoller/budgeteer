@@ -48,7 +48,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   [IncomeCategory.INVESTMENT]: "#2dd4bf",
   [IncomeCategory.GIFT]: "#fb923c",
   // Income OTHER uses a different color
-  "income_OTHER": "#94a3b8",
+  income_OTHER: "#94a3b8",
 
   // Expense categories
   [ExpenseCategory.HOUSING]: "#ef4444",

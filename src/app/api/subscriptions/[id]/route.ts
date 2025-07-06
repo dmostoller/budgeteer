@@ -11,7 +11,10 @@ const subscriptionSchema = z.object({
   category: z.enum(["SUBSCRIPTIONS"]).default("SUBSCRIPTIONS"),
 });
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -28,7 +31,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     if (!subscription) {
-      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Subscription not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json(subscription);
@@ -36,12 +42,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     console.error("Error fetching subscription:", error);
     return NextResponse.json(
       { error: "Failed to fetch subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -61,7 +70,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
 
     if (!existingSubscription) {
-      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Subscription not found" },
+        { status: 404 },
+      );
     }
 
     // Update the subscription record
@@ -81,12 +93,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     console.error("Error updating subscription:", error);
     return NextResponse.json(
       { error: "Failed to update subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -104,7 +119,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     });
 
     if (!existingSubscription) {
-      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Subscription not found" },
+        { status: 404 },
+      );
     }
 
     // Delete the subscription record
@@ -119,7 +137,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     console.error("Error deleting subscription:", error);
     return NextResponse.json(
       { error: "Failed to delete subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -11,7 +11,9 @@ export default function NewIncomePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Add Income</h1>
-        <p className="text-muted-foreground">Add a new income record to your finances</p>
+        <p className="text-muted-foreground">
+          Add a new income record to your finances
+        </p>
       </div>
       <IncomeForm />
     </div>

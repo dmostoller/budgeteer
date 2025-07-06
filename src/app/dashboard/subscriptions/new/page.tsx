@@ -11,7 +11,9 @@ export default function NewSubscriptionPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Add Subscription</h1>
-        <p className="text-muted-foreground">Add a new subscription to your finances</p>
+        <p className="text-muted-foreground">
+          Add a new subscription to your finances
+        </p>
       </div>
       <SubscriptionForm />
     </div>

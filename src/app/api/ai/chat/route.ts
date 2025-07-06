@@ -86,10 +86,13 @@ IMPORTANT timeframe extraction rules:
     });
 
     const command = intentResponse.object;
-    
+
     // Debug logging
     console.log("[AI-CHAT] Intent detected:", command);
-    console.log("[AI-CHAT] Timeframe extracted:", command.parameters?.timeframe);
+    console.log(
+      "[AI-CHAT] Timeframe extracted:",
+      command.parameters?.timeframe,
+    );
 
     // Handle different command types
     if (command.type === "add_expense" && command.parameters?.amount) {
@@ -173,10 +176,10 @@ IMPORTANT timeframe extraction rules:
         };
     const startDate = dateRange.start;
     const endDate = dateRange.end;
-    
-    console.log("[AI-CHAT] Date range:", { 
-      start: startDate.toISOString(), 
-      end: endDate.toISOString() 
+
+    console.log("[AI-CHAT] Date range:", {
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
     });
 
     const [expenses, incomes, subscriptions] = await Promise.all([
@@ -361,24 +364,24 @@ function getDateRangeFromTimeframe(timeframe: string): {
   for (let i = 0; i < monthNames.length; i++) {
     if (lowerTimeframe.includes(monthNames[i])) {
       let year = now.getFullYear();
-      
+
       // Handle different cases:
       // 1. "last may" when we're past May → use last year
       // 2. "may 2024" → extract the year
       // 3. "may" alone → use current year
-      
+
       // Check for explicit year
       const yearMatch = lowerTimeframe.match(/(\d{4})/);
       if (yearMatch) {
         year = parseInt(yearMatch[1]);
-      } 
+      }
       // Check for "last" + month when we're past that month
       else if (lowerTimeframe.includes("last")) {
         // Always use previous year when "last" is specified with a month name
         year = now.getFullYear() - 1;
       }
       // Plain month name - use current year
-      
+
       return {
         start: new Date(year, i, 1),
         end: endOfMonth(new Date(year, i, 1)),

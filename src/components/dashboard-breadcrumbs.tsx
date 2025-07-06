@@ -26,7 +26,7 @@ export function DashboardBreadcrumbs() {
     calendar: "Calendar",
     advisor: "AI Advisor",
   };
-  
+
   // Map of advisor tab values to display names
   const advisorTabNames: Record<string, string> = {
     assistant: "Assistant",
@@ -36,7 +36,9 @@ export function DashboardBreadcrumbs() {
 
   // Check if we're on the advisor page and have a tab param
   const isAdvisorPage = pathname === "/dashboard/advisor";
-  const activeTab = isAdvisorPage ? searchParams.get("tab") || "assistant" : null;
+  const activeTab = isAdvisorPage
+    ? searchParams.get("tab") || "assistant"
+    : null;
 
   return (
     <Breadcrumb>
@@ -61,11 +63,13 @@ export function DashboardBreadcrumbs() {
             </React.Fragment>
           );
         })}
-        
+
         {/* Add tab breadcrumb for advisor page */}
         {activeTab && (
           <BreadcrumbItem>
-            <BreadcrumbPage>{advisorTabNames[activeTab] || activeTab}</BreadcrumbPage>
+            <BreadcrumbPage>
+              {advisorTabNames[activeTab] || activeTab}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         )}
       </BreadcrumbList>

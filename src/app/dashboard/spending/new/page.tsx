@@ -11,7 +11,9 @@ export default function NewExpensePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Add Expense</h1>
-        <p className="text-muted-foreground">Add a new expense record to your finances</p>
+        <p className="text-muted-foreground">
+          Add a new expense record to your finances
+        </p>
       </div>
       <ExpenseForm />
     </div>

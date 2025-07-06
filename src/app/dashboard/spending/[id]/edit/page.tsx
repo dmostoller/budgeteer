@@ -15,31 +15,31 @@ export default async function EditExpensePage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     return null;
   }
-  
+
   const { id } = await params;
-  
+
   const expense = await prisma.expense.findUnique({
     where: {
       id: id,
       userId: session.user.id,
     },
   });
-  
+
   if (!expense) {
     notFound();
   }
-  
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Expense</h1>
         <p className="text-muted-foreground">Edit an existing expense record</p>
       </div>
-      <ExpenseForm 
+      <ExpenseForm
         defaultValues={{
           description: expense.description,
           amount: Number(expense.amount),
@@ -47,8 +47,8 @@ export default async function EditExpensePage({
           category: expense.category,
           isRecurring: expense.isRecurring,
           recurrencePeriod: expense.recurrencePeriod || undefined,
-        }} 
-        expenseId={expense.id} 
+        }}
+        expenseId={expense.id}
       />
     </div>
   );

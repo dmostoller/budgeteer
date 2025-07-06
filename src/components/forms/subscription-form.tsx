@@ -97,9 +97,7 @@ export function SubscriptionForm({
 
       router.push("/dashboard/subscriptions");
       router.refresh();
-      toast.success(
-        isEditing ? "Subscription updated" : "Subscription added"
-      );
+      toast.success(isEditing ? "Subscription updated" : "Subscription added");
     } catch (error) {
       toast.error("Something went wrong");
       console.error(error);
@@ -184,7 +182,7 @@ export function SubscriptionForm({
                         variant={"outline"}
                         className={cn(
                           "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
@@ -215,8 +213,8 @@ export function SubscriptionForm({
           {isSubmitting
             ? "Saving..."
             : isEditing
-            ? "Update Subscription"
-            : "Add Subscription"}
+              ? "Update Subscription"
+              : "Add Subscription"}
         </Button>
       </form>
     </Form>

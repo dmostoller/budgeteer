@@ -15,38 +15,38 @@ export default async function EditSubscriptionPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     return null;
   }
-  
+
   const { id } = await params;
-  
+
   const subscription = await prisma.subscription.findUnique({
     where: {
       id: id,
       userId: session.user.id,
     },
   });
-  
+
   if (!subscription) {
     notFound();
   }
-  
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Subscription</h1>
         <p className="text-muted-foreground">Edit an existing subscription</p>
       </div>
-      <SubscriptionForm 
+      <SubscriptionForm
         defaultValues={{
           name: subscription.name,
           amount: Number(subscription.amount),
           billingCycle: subscription.billingCycle,
           nextPaymentDate: subscription.nextPaymentDate,
-        }} 
-        subscriptionId={subscription.id} 
+        }}
+        subscriptionId={subscription.id}
       />
     </div>
   );
