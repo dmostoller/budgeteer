@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers"; // Import cookies
-import { ModeToggle } from "@/components/mode-toggle";
+import { cookies } from "next/headers";
+import { DashboardHeaderControls } from "@/components/dashboard-header-controls";
 // Import the specific sidebar components including Provider and Inset
 import {
   Sidebar,
@@ -14,7 +14,6 @@ import {
   SidebarProvider, // Import Provider
   SidebarInset, // Import Inset
   SidebarTrigger,
-  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -28,6 +27,7 @@ import Image from "next/image";
 import { NavUser } from "@/components/auth/nav-user";
 import { Separator } from "@/components/ui/separator";
 import { DashboardBreadcrumbs } from "@/components/dashboard-breadcrumbs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const metadata: Metadata = {
   title: "Dashboard | Budgeteer",
@@ -57,8 +57,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies(); // Get cookies
-  // Determine default state from cookie, default to true if not set or invalid
+  const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   return (
@@ -72,7 +71,7 @@ export default async function DashboardLayout({
       }
     >
       {/* The actual Sidebar component */}
-      <Sidebar collapsible="icon">
+      <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader className="group-data-[collapsible=icon]:px-2">
           <div className="flex items-center group-data-[collapsible=icon]:justify-center">
             {/* Show mascot when expanded */}
@@ -96,12 +95,12 @@ export default async function DashboardLayout({
             </span>
           </div>
         </SidebarHeader>
-        <SidebarContent className="pt-4 px-2">
+        <SidebarContent className="pt-4 group-data-[collapsible=icon]:px-3">
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild tooltip={item.label}>
-                  <Link href={item.href}>
+                  <Link href={item.href} className="flex items-center gap-2">
                     <item.icon />
                     <span>{item.label}</span>
                   </Link>
@@ -113,12 +112,11 @@ export default async function DashboardLayout({
         <SidebarFooter>
           <NavUser />
         </SidebarFooter>
-        <SidebarRail />
       </Sidebar>
 
       {/* Wrap the main content area with SidebarInset */}
       <SidebarInset>
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-screen">
           <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator
@@ -126,12 +124,12 @@ export default async function DashboardLayout({
               className="mr-2 data-[orientation=vertical]:h-4"
             />
             <DashboardBreadcrumbs />
-            <div className="ml-auto">
-              <ModeToggle />
-            </div>
+            <DashboardHeaderControls />
           </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
-            {children}
+          <main className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="flex flex-col gap-4 p-4 lg:p-6">{children}</div>
+            </ScrollArea>
           </main>
         </div>
       </SidebarInset>

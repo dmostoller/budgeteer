@@ -25,6 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePrivacy } from "@/contexts/privacy-context";
+import { formatCurrencyWithPrivacy } from "@/lib/utils";
 
 type IncomeDistribution = {
   category: string;
@@ -40,17 +42,18 @@ export function IncomeDistributionChart({
   data,
   className,
 }: IncomeDistributionChartProps) {
+  const { isPrivacyMode } = usePrivacy();
   const id = "income-distribution-interactive";
-  
+
   // Calculate total for percentage
   const total = data.reduce((sum, item) => sum + item.value, 0);
-  
+
   // Sort data by value for better visualization
   const sortedData = [...data].sort((a, b) => b.value - a.value);
-  
+
   // State for active category
   const [activeCategory, setActiveCategory] = React.useState(
-    sortedData[0]?.category || ""
+    sortedData[0]?.category || "",
   );
 
   // Create a ChartConfig object dynamically from the data
@@ -77,11 +80,33 @@ export function IncomeDistributionChart({
   // Find active index
   const activeIndex = React.useMemo(
     () => chartData.findIndex((item) => item.category === activeCategory),
-    [activeCategory, chartData]
+    [activeCategory, chartData],
   );
 
   // Get active item data
   const activeItem = chartData[activeIndex];
+
+  // Custom formatter for center label with compact notation
+  const formatCenterLabel = (value: number) => {
+    if (isPrivacyMode) {
+      // Create compact format then replace digits with dots
+      const formatted = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+        notation: "compact",
+      }).format(value);
+      return formatted.replace(/\d/g, "•");
+    }
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+      notation: "compact",
+    }).format(value);
+  };
 
   return (
     <Card data-chart={id} className={className}>
@@ -100,7 +125,8 @@ export function IncomeDistributionChart({
           </SelectTrigger>
           <SelectContent align="end" className="rounded-xl">
             {sortedData.map((item) => {
-              const config = chartConfig[item.category as keyof typeof chartConfig];
+              const config =
+                chartConfig[item.category as keyof typeof chartConfig];
               if (!config) return null;
 
               return (
@@ -139,18 +165,18 @@ export function IncomeDistributionChart({
                   formatter={(value, name, item) => (
                     <div className="flex flex-col">
                       <span className="font-medium text-sm mb-1">
-                        {chartConfig[name as keyof typeof chartConfig]?.label || name}
+                        {chartConfig[name as keyof typeof chartConfig]?.label ||
+                          name}
                       </span>
                       <span className="font-medium">
-                        {new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        }).format(value as number)}
+                        {formatCurrencyWithPrivacy(
+                          value as number,
+                          isPrivacyMode,
+                        )}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {Math.round((item.payload.percent as number) * 100)}% of total
+                        {Math.round((item.payload.percent as number) * 100)}% of
+                        total
                       </span>
                     </div>
                   )}
@@ -197,20 +223,16 @@ export function IncomeDistributionChart({
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                            notation: "compact",
-                          }).format(activeItem?.value || 0)}
+                          {formatCenterLabel(activeItem?.value || 0)}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground"
                         >
-                          {chartConfig[activeCategory as keyof typeof chartConfig]?.label || ""}
+                          {chartConfig[
+                            activeCategory as keyof typeof chartConfig
+                          ]?.label || ""}
                         </tspan>
                       </text>
                     );

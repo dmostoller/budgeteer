@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { IncomeCategory, RecurrencePeriod } from "@prisma/client";
@@ -18,22 +18,17 @@ const bulkIncomeSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return new Response("Unauthorized", { status: 401 });
-    }
+    const user = await requireAuth();
 
     const body = await req.json();
     const { incomes } = bulkIncomeSchema.parse(body);
-
-    const userId = session.user.id;
 
     // Create all incomes in a transaction
     const createdIncomes = await db.$transaction(
       incomes.map((income) =>
         db.income.create({
           data: {
-            userId,
+            userId: user.id,
             amount: income.amount,
             source: income.source,
             date: new Date(income.date),
@@ -60,13 +55,12 @@ export async function POST(req: Request) {
       },
     );
   } catch (error) {
-    console.error("[BULK-INCOMES-ERROR]", error);
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
-    return new Response("Internal Server Error", { status: 500 });
+    return handleAuthError(error);
   }
 }

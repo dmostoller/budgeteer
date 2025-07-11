@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireOwnership, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 
 const incomeSchema = z.object({
@@ -27,31 +27,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: incomeId } = await params;
+    await requireOwnership("income", incomeId);
 
     const income = await prisma.income.findUnique({
       where: {
         id: incomeId,
-        userId: session.user.id,
       },
     });
 
-    if (!income) {
-      return NextResponse.json({ error: "Income not found" }, { status: 404 });
-    }
-
     return NextResponse.json(income);
   } catch (error) {
-    console.error("Error fetching income:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch income" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }
 
@@ -60,26 +47,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: incomeId } = await params;
+    await requireOwnership("income", incomeId);
+
     const body = await req.json();
     const validatedData = incomeSchema.parse(body);
-
-    // Verify ownership
-    const existingIncome = await prisma.income.findUnique({
-      where: {
-        id: incomeId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingIncome) {
-      return NextResponse.json({ error: "Income not found" }, { status: 404 });
-    }
 
     // Update the income record
     const updatedIncome = await prisma.income.update({
@@ -95,11 +67,7 @@ export async function PATCH(
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
 
-    console.error("Error updating income:", error);
-    return NextResponse.json(
-      { error: "Failed to update income" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }
 
@@ -108,24 +76,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: incomeId } = await params;
-
-    // Verify ownership
-    const existingIncome = await prisma.income.findUnique({
-      where: {
-        id: incomeId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingIncome) {
-      return NextResponse.json({ error: "Income not found" }, { status: 404 });
-    }
+    await requireOwnership("income", incomeId);
 
     // Delete the income record
     await prisma.income.delete({
@@ -136,10 +88,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting income:", error);
-    return NextResponse.json(
-      { error: "Failed to delete income" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

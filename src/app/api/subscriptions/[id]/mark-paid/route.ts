@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireOwnership, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 import { addMonths, addYears } from "date-fns";
 
@@ -8,18 +8,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: subscriptionId } = await params;
+    await requireOwnership("subscription", subscriptionId);
 
-    // Verify ownership and get subscription details
+    // Get subscription details
     const subscription = await prisma.subscription.findUnique({
       where: {
         id: subscriptionId,
-        userId: session.user.id,
       },
     });
 
@@ -53,10 +48,6 @@ export async function POST(
 
     return NextResponse.json(updatedSubscription);
   } catch (error) {
-    console.error("Error marking subscription as paid:", error);
-    return NextResponse.json(
-      { error: "Failed to update subscription" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

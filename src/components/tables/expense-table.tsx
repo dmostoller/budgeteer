@@ -1,17 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
+  getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFacetedMinMaxValues,
   SortingState,
   useReactTable,
+  ColumnFiltersState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Edit, Trash2 } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Search,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
+import { usePrivacy } from "@/contexts/privacy-context";
+import { formatCurrencyWithPrivacy } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +46,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { ExpenseCategory, RecurrencePeriod } from "@prisma/client";
+import { CategorySelectCell } from "@/components/tables/category-select-cell";
+import { RecurringSelectCell } from "@/components/tables/recurring-select-cell";
+import { DebouncedInput } from "@/components/ui/debounced-input";
+import { Filter, ActiveFilters } from "@/components/ui/table-filter";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -41,14 +66,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { ExpenseCategory, RecurrencePeriod } from "@prisma/client";
-import {
-  EXPENSE_CATEGORIES,
-  RECURRENCE_PERIODS,
-  CATEGORY_COLORS,
-} from "@/lib/constants";
 
 export type Expense = {
   id: string;
@@ -62,49 +79,43 @@ export type Expense = {
 
 interface ExpenseTableProps {
   data: Expense[];
-  defaultPageSize?: number;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  isLoading?: boolean;
 }
 
 export function ExpenseTable({
   data: initialData,
-  defaultPageSize = 20,
+  totalCount,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  isLoading = false,
 }: ExpenseTableProps) {
   const router = useRouter();
+  const { isPrivacyMode } = usePrivacy();
   const [data, setData] = useState(initialData);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
   const [updatingCategories, setUpdatingCategories] = useState<Set<string>>(
     new Set(),
   );
-  const [pageSize, setPageSize] = useState(defaultPageSize);
-  const [pageIndex, setPageIndex] = useState(0);
+  const [updatingRecurring, setUpdatingRecurring] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Update local data when props change (e.g., after adding new expense)
   useEffect(() => {
     setData(initialData);
   }, [initialData]);
-
-  // Update page size when defaultPageSize prop changes
-  useEffect(() => {
-    if (pageSize !== defaultPageSize) {
-      setPageSize(defaultPageSize);
-      setPageIndex(0); // Reset to first page only when page size actually changes
-    }
-  }, [defaultPageSize, pageSize]);
-
-  const getCategoryLabel = (value: ExpenseCategory) => {
-    return (
-      EXPENSE_CATEGORIES.find((cat) => cat.value === value)?.label || value
-    );
-  };
-
-  const getRecurrencePeriodLabel = (
-    value: RecurrencePeriod | null | undefined,
-  ) => {
-    if (!value) return "";
-    return RECURRENCE_PERIODS.find((p) => p.value === value)?.label || value;
-  };
 
   const handleCategoryChange = async (
     expenseId: string,
@@ -147,110 +158,250 @@ export function ExpenseTable({
     }
   };
 
-  const columns: ColumnDef<Expense>[] = [
+  const handleRecurringChange = async (
+    expenseId: string,
+    isRecurring: boolean,
+  ) => {
+    setUpdatingRecurring((prev) => new Set(prev).add(expenseId));
+
+    try {
+      const response = await fetch(`/api/expenses/${expenseId}/recurring`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isRecurring }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update recurring status");
+      }
+
+      // Update local data instead of refreshing
+      setData((prevData) =>
+        prevData.map((expense) =>
+          expense.id === expenseId
+            ? {
+                ...expense,
+                isRecurring,
+                // Clear recurrence period if not recurring
+                recurrencePeriod: isRecurring ? expense.recurrencePeriod : null,
+              }
+            : expense,
+        ),
+      );
+
+      toast.success("Recurring status updated successfully");
+    } catch (error) {
+      toast.error("Failed to update recurring status");
+      console.error(error);
+    } finally {
+      setUpdatingRecurring((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(expenseId);
+        return newSet;
+      });
+    }
+  };
+
+  const columns = useMemo<ColumnDef<Expense>[]>(() => [
     {
       accessorKey: "description",
-      header: "Description",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-3 h-8 data-[state=open]:bg-accent"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Description
+            {column.getIsSorted() === "asc" ? (
+              <ChevronUp className="ml-1 h-3 w-3" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ChevronDown className="ml-1 h-3 w-3" />
+            ) : (
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            )}
+          </Button>
+        );
+      },
       cell: ({ row }) => (
         <div className="truncate">{row.getValue("description")}</div>
       ),
       size: 250,
       minSize: 200,
       maxSize: 300,
+      enableColumnFilter: true,
+      filterFn: "includesString",
     },
     {
       accessorKey: "amount",
-      header: "Amount",
+      header: ({ column }) => {
+        return (
+          <div className="text-right">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-3 h-8 data-[state=open]:bg-accent"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              Amount
+              {column.getIsSorted() === "asc" ? (
+                <ChevronUp className="ml-1 h-3 w-3" />
+              ) : column.getIsSorted() === "desc" ? (
+                <ChevronDown className="ml-1 h-3 w-3" />
+              ) : (
+                <ArrowUpDown className="ml-1 h-3 w-3" />
+              )}
+            </Button>
+          </div>
+        );
+      },
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("amount"));
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(amount);
+        const formatted = formatCurrencyWithPrivacy(amount, isPrivacyMode);
         return <div className="font-medium text-right">{formatted}</div>;
       },
       size: 120,
+      enableColumnFilter: true,
+      filterFn: "inNumberRange",
     },
     {
       accessorKey: "date",
-      header: "Date",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-3 h-8 data-[state=open]:bg-accent"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Date
+            {column.getIsSorted() === "asc" ? (
+              <ChevronUp className="ml-1 h-3 w-3" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ChevronDown className="ml-1 h-3 w-3" />
+            ) : (
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            )}
+          </Button>
+        );
+      },
       cell: ({ row }) => {
         return (
           <div>{format(new Date(row.getValue("date")), "MMM d, yyyy")}</div>
         );
       },
       size: 120,
+      sortingFn: "datetime",
+      enableColumnFilter: true,
+      filterFn: (row, id, value) => {
+        if (!value || !Array.isArray(value) || value.length !== 2) return true;
+        const date = new Date(row.getValue(id));
+        const [start, end] = value;
+        return date >= start && date <= end;
+      },
     },
     {
       accessorKey: "category",
-      header: "Category",
+      header: ({ column }) => {
+        return (
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-3 h-8 data-[state=open]:bg-accent"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              Category
+              {column.getIsSorted() === "asc" ? (
+                <ChevronUp className="ml-1 h-3 w-3" />
+              ) : column.getIsSorted() === "desc" ? (
+                <ChevronDown className="ml-1 h-3 w-3" />
+              ) : (
+                <ArrowUpDown className="ml-1 h-3 w-3" />
+              )}
+            </Button>
+          </div>
+        );
+      },
       cell: ({ row }) => {
         const category = row.getValue("category") as ExpenseCategory;
-        const categoryColor = CATEGORY_COLORS[category];
         const expenseId = row.original.id;
         const isUpdating = updatingCategories.has(expenseId);
 
         return (
-          <Select
-            value={category}
-            onValueChange={(value) =>
-              handleCategoryChange(expenseId, value as ExpenseCategory)
+          <CategorySelectCell
+            category={category}
+            onCategoryChange={(newCategory) =>
+              handleCategoryChange(expenseId, newCategory)
             }
-            disabled={isUpdating}
-          >
-            <SelectTrigger
-              className="w-[180px] border-0"
-              style={{
-                backgroundColor: categoryColor + "20",
-                color: categoryColor,
-              }}
-            >
-              <SelectValue>
-                <span style={{ color: categoryColor, fontWeight: 500 }}>
-                  {getCategoryLabel(category)}
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {EXPENSE_CATEGORIES.map((cat) => (
-                <SelectItem key={cat.value} value={cat.value}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: CATEGORY_COLORS[cat.value] }}
-                    />
-                    {cat.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            isUpdating={isUpdating}
+            type="expense"
+          />
         );
+      },
+      enableColumnFilter: true,
+      filterFn: (row, id, value) => {
+        return value === "" || row.getValue(id) === value;
       },
     },
     {
       accessorKey: "isRecurring",
-      header: "Recurring",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-3 h-8 data-[state=open]:bg-accent"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Recurring
+            {column.getIsSorted() === "asc" ? (
+              <ChevronUp className="ml-1 h-3 w-3" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ChevronDown className="ml-1 h-3 w-3" />
+            ) : (
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            )}
+          </Button>
+        );
+      },
       cell: ({ row }) => {
         const isRecurring = row.getValue("isRecurring") as boolean;
         const recurrencePeriod = row.original.recurrencePeriod;
+        const expenseId = row.original.id;
+        const isUpdating = updatingRecurring.has(expenseId);
 
         return (
-          <div className="flex flex-col gap-1">
-            <Badge variant="outline" className="w-fit">
-              {isRecurring ? "Yes" : "No"}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              {getRecurrencePeriodLabel(recurrencePeriod)}
-            </span>
-          </div>
+          <RecurringSelectCell
+            isRecurring={isRecurring}
+            recurrencePeriod={recurrencePeriod}
+            onRecurringChange={(value) =>
+              handleRecurringChange(expenseId, value)
+            }
+            isUpdating={isUpdating}
+          />
         );
       },
       size: 100,
+      enableColumnFilter: true,
+      filterFn: (row, id, value) => {
+        const isRecurring = row.getValue(id);
+        if (value === "true") return isRecurring === true;
+        if (value === "false") return isRecurring === false;
+        return true;
+      },
     },
     {
       id: "actions",
       header: "Actions",
+      enableHiding: false,
       cell: ({ row }) => {
         return (
           <div className="flex items-center justify-end gap-2">
@@ -326,37 +477,79 @@ export function ExpenseTable({
       },
       size: 100,
     },
-  ];
+  ], [isPrivacyMode, updatingCategories, updatingRecurring, router]);
 
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange: (updater) => {
-      if (typeof updater === "function") {
-        const newPagination = updater({ pageIndex, pageSize });
-        setPageIndex(newPagination.pageIndex);
-        setPageSize(newPagination.pageSize);
-      }
-    },
     state: {
       sorting,
+      columnFilters,
+      columnVisibility,
       rowSelection,
-      pagination: {
-        pageSize,
-        pageIndex,
-      },
+      globalFilter,
     },
+    enableRowSelection: false,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedMinMaxValues: getFacetedMinMaxValues(),
+    manualPagination: true,
+    pageCount: Math.ceil(totalCount / pageSize),
   });
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border overflow-hidden">
-        <Table className="table-fixed">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-1 items-center space-x-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <DebouncedInput
+              placeholder="Search all columns..."
+              value={globalFilter ?? ""}
+              onChange={(value) => setGlobalFilter(String(value))}
+              className="h-9 w-[250px] pl-8"
+              debounce={300}
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9">
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <ActiveFilters table={table} />
+      <div className="rounded-md border">
+        <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -364,7 +557,6 @@ export function ExpenseTable({
                   return (
                     <TableHead
                       key={header.id}
-                      style={{ width: header.getSize() }}
                       className={
                         header.column.id === "amount" ? "text-right" : ""
                       }
@@ -380,19 +572,35 @@ export function ExpenseTable({
                 })}
               </TableRow>
             ))}
+            {/* Separate row for filters */}
+            <TableRow>
+              {table.getHeaderGroups()[0]?.headers.map((header) => (
+                <TableHead key={header.id} className="p-2">
+                  {header.column.getCanFilter() ? (
+                    <Filter column={header.column} table={table} />
+                  ) : null}
+                </TableHead>
+              ))}
+            </TableRow>
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                    >
+                    <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -415,40 +623,53 @@ export function ExpenseTable({
         </Table>
       </div>
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Showing{" "}
-          {table.getState().pagination.pageIndex *
-            table.getState().pagination.pageSize +
-            1}{" "}
-          to{" "}
-          {Math.min(
-            (table.getState().pagination.pageIndex + 1) *
-              table.getState().pagination.pageSize,
-            data.length,
-          )}{" "}
-          of {data.length} results
+        <div className="flex-1 text-sm text-muted-foreground">
+          Showing {Math.min((currentPage - 1) * pageSize + 1, totalCount)} to{" "}
+          {Math.min(currentPage * pageSize, totalCount)} of {totalCount} entries
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <div className="text-sm text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
+        <div className="flex items-center space-x-6 lg:space-x-8">
+          <div className="flex items-center space-x-2">
+            <p className="text-sm font-medium">Rows per page</p>
+            <Select
+              value={`${pageSize}`}
+              onValueChange={(value) => {
+                onPageSizeChange(Number(value));
+                onPageChange(1); // Reset to first page when changing page size
+              }}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue placeholder={pageSize} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={`${size}`}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            Page {currentPage} of {Math.ceil(totalCount / pageSize)}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -17,6 +17,8 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
+import { usePrivacy } from "@/contexts/privacy-context";
+import { formatCurrencyWithPrivacy } from "@/lib/utils";
 
 type MonthlyData = {
   month: string;
@@ -44,14 +46,11 @@ export function IncomeExpenseChart({
   data,
   className,
 }: IncomeExpenseChartProps) {
+  const { isPrivacyMode } = usePrivacy();
+
   // Currency formatter for Y-axis and tooltip
   const currencyFormatter = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+    return formatCurrencyWithPrivacy(value, isPrivacyMode);
   };
 
   return (

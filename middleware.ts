@@ -1,44 +1,27 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
 
-export function middleware(request: NextRequest) {
-  const isLoggedIn =
-    request.cookies.has("next-auth.session-token") ||
-    request.cookies.has("__Secure-next-auth.session-token");
-
+export async function middleware(request: NextRequest) {
+  // Check if it's an API route (excluding auth routes)
   const pathname = request.nextUrl.pathname;
 
-  // Public paths that don't require authentication
-  const isPublicPath = ["/", "/login", "/api/auth"].some(
-    (path) => pathname === path || pathname.startsWith(path + "/"),
-  );
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/")) {
+    // Get the session using NextAuth
+    const session = await auth();
 
-  // Static assets and non-auth API routes
-  const isExcludedPath =
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/favicon.ico") ||
-    (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth"));
-
-  // Skip middleware for public paths and excluded routes
-  if (isPublicPath || isExcludedPath) {
-    return NextResponse.next();
-  }
-
-  // Redirect to login if not authenticated
-  if (!isLoggedIn) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", encodeURI(pathname));
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Redirect authenticated users accessing login to dashboard
-  if (isLoggedIn && pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    // If no session, return unauthorized
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    // Match all API routes except /api/auth
+    "/api/((?!auth).*)",
+  ],
 };

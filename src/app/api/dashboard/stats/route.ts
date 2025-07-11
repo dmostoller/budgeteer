@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 import { startOfMonth, endOfMonth, format, subMonths } from "date-fns";
 
+// Helper function to calculate monthly amount based on recurrence period
+function calculateMonthlyAmount(amount: number, period: string): number {
+  const baseAmount = Number(amount);
+  switch (period) {
+    case "DAILY":
+      return baseAmount * 30;
+    case "WEEKLY":
+      return baseAmount * 4.33;
+    case "QUARTERLY":
+      return baseAmount / 3;
+    case "YEARLY":
+      return baseAmount / 12;
+    default:
+      return baseAmount; // MONTHLY
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await requireAuth();
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
@@ -23,143 +37,98 @@ export async function GET(req: NextRequest) {
 
     const monthStart = startOfMonth(targetDate);
     const monthEnd = endOfMonth(targetDate);
-    const userId = session.user.id;
+    const userId = user.id;
 
-    // Get regular (non-recurring) income total for current month
-    const regularIncomeTotal = await prisma.income.aggregate({
-      where: {
-        userId,
-        date: {
-          gte: monthStart,
-          lte: monthEnd,
+    // Get one-time transactions for current month
+    const [regularIncomeTotal, regularExpenseTotal] = await Promise.all([
+      prisma.income.aggregate({
+        where: {
+          userId,
+          date: {
+            gte: monthStart,
+            lte: monthEnd,
+          },
+          isRecurring: false,
         },
-        isRecurring: false,
-      },
-      _sum: {
-        amount: true,
-      },
+        _sum: {
+          amount: true,
+        },
+      }),
+      prisma.expense.aggregate({
+        where: {
+          userId,
+          date: {
+            gte: monthStart,
+            lte: monthEnd,
+          },
+          isRecurring: false,
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]);
+
+    // Get recurring items that exist as of the target month
+    const [recurringIncomes, recurringExpenses, activeSubscriptions] =
+      await Promise.all([
+        prisma.income.findMany({
+          where: {
+            userId,
+            isRecurring: true,
+            date: { lte: monthEnd }, // Only include if created before month end
+          },
+        }),
+        prisma.expense.findMany({
+          where: {
+            userId,
+            isRecurring: true,
+            date: { lte: monthEnd }, // Only include if created before month end
+          },
+        }),
+        prisma.subscription.findMany({
+          where: {
+            userId,
+            isActive: true,
+          },
+        }),
+      ]);
+
+    // Calculate recurring income for the current month
+    let recurringIncomeTotal = 0;
+    recurringIncomes.forEach((income) => {
+      recurringIncomeTotal += calculateMonthlyAmount(
+        Number(income.amount),
+        income.recurrencePeriod || "MONTHLY",
+      );
     });
 
-    // Get recurring incomes
-    const recurringIncomesForMonth = await prisma.income.findMany({
-      where: {
-        userId,
-        isRecurring: true,
-      },
+    // Calculate recurring expenses for the current month
+    let recurringExpenseTotal = 0;
+    recurringExpenses.forEach((expense) => {
+      recurringExpenseTotal += calculateMonthlyAmount(
+        Number(expense.amount),
+        expense.recurrencePeriod || "MONTHLY",
+      );
     });
 
-    // Calculate the total recurring income amount for this month
-    const recurringIncomeTotal = recurringIncomesForMonth.reduce(
-      (total, income) => {
-        // Calculate amount based on recurrence period
-        let periodMultiplier = 1;
+    // Calculate subscription costs for the current month
+    let subscriptionMonthlyTotal = 0;
+    activeSubscriptions.forEach((sub) => {
+      if (sub.billingCycle === "MONTHLY") {
+        subscriptionMonthlyTotal += Number(sub.amount);
+      } else if (sub.billingCycle === "YEARLY") {
+        subscriptionMonthlyTotal += Number(sub.amount) / 12;
+      }
+    });
 
-        if (income.recurrencePeriod === "DAILY") {
-          // Average days in a month
-          periodMultiplier = 30;
-        } else if (income.recurrencePeriod === "WEEKLY") {
-          // Average weeks in a month
-          periodMultiplier = 4.33;
-        } else if (income.recurrencePeriod === "QUARTERLY") {
-          // 1/3 of a quarter per month
-          periodMultiplier = 1 / 3;
-        } else if (income.recurrencePeriod === "YEARLY") {
-          // 1/12 of a year per month
-          periodMultiplier = 1 / 12;
-        }
-        // MONTHLY will use the default multiplier of 1
-
-        return total + Number(income.amount) * periodMultiplier;
-      },
-      0,
-    );
-
-    // Total income (regular + recurring)
+    // Calculate totals
     const totalIncomeAmount =
       Number(regularIncomeTotal._sum.amount || 0) + recurringIncomeTotal;
-
-    // Get current month expense total from non-recurring expenses
-    const regularExpenseTotal = await prisma.expense.aggregate({
-      where: {
-        userId,
-        date: {
-          gte: monthStart,
-          lte: monthEnd,
-        },
-        isRecurring: false,
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // Get recurring expenses for this month - we'll count these separately
-    const recurringExpensesForMonth = await prisma.expense.findMany({
-      where: {
-        userId,
-        isRecurring: true,
-      },
-    });
-
-    // Calculate the total recurring expense amount for this month
-    const recurringExpenseTotal = recurringExpensesForMonth.reduce(
-      (total, expense) => {
-        // Calculate amount based on recurrence period
-        let periodMultiplier = 1;
-
-        if (expense.recurrencePeriod === "DAILY") {
-          // Average days in a month
-          periodMultiplier = 30;
-        } else if (expense.recurrencePeriod === "WEEKLY") {
-          // Average weeks in a month
-          periodMultiplier = 4.33;
-        } else if (expense.recurrencePeriod === "QUARTERLY") {
-          // 1/3 of a quarter per month
-          periodMultiplier = 1 / 3;
-        } else if (expense.recurrencePeriod === "YEARLY") {
-          // 1/12 of a year per month
-          periodMultiplier = 1 / 12;
-        }
-        // MONTHLY will use the default multiplier of 1
-
-        return total + Number(expense.amount) * periodMultiplier;
-      },
-      0,
-    );
-
-    // Get subscription expenses for this month
-    const subscriptionTotal = await prisma.subscription.aggregate({
-      where: {
-        userId,
-        OR: [
-          // Monthly subscriptions due this month
-          {
-            billingCycle: "MONTHLY",
-            nextPaymentDate: {
-              gte: monthStart,
-              lte: monthEnd,
-            },
-          },
-          // Yearly subscriptions due this month
-          {
-            billingCycle: "YEARLY",
-            nextPaymentDate: {
-              gte: monthStart,
-              lte: monthEnd,
-            },
-          },
-        ],
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // Calculate total expenses (regular + recurring + subscriptions)
     const totalExpenseAmount =
       Number(regularExpenseTotal._sum.amount || 0) +
       recurringExpenseTotal +
-      Number(subscriptionTotal._sum.amount || 0);
+      subscriptionMonthlyTotal;
 
     // Get monthly data for the chart (last 6 months)
     const monthlyData = [];
@@ -169,141 +138,73 @@ export async function GET(req: NextRequest) {
       const chartMonthEnd = endOfMonth(chartMonth);
       const monthName = format(chartMonth, "MMM yyyy");
 
-      // Calculate month regular income (non-recurring)
-      const monthRegularIncome = await prisma.income.aggregate({
-        where: {
-          userId,
-          date: {
-            gte: chartMonthStart,
-            lte: chartMonthEnd,
+      // Get one-time transactions for this month
+      const [monthRegularIncome, monthRegularExpenses] = await Promise.all([
+        prisma.income.aggregate({
+          where: {
+            userId,
+            date: {
+              gte: chartMonthStart,
+              lte: chartMonthEnd,
+            },
+            isRecurring: false,
           },
-          isRecurring: false,
-        },
-        _sum: {
-          amount: true,
-        },
+          _sum: {
+            amount: true,
+          },
+        }),
+        prisma.expense.aggregate({
+          where: {
+            userId,
+            date: {
+              gte: chartMonthStart,
+              lte: chartMonthEnd,
+            },
+            isRecurring: false,
+          },
+          _sum: {
+            amount: true,
+          },
+        }),
+      ]);
+
+      // Calculate recurring amounts for items active in this month
+      let monthRecurringIncome = 0;
+      recurringIncomes.forEach((income) => {
+        if (income.date <= chartMonthEnd) {
+          monthRecurringIncome += calculateMonthlyAmount(
+            Number(income.amount),
+            income.recurrencePeriod || "MONTHLY",
+          );
+        }
       });
 
-      // Get recurring incomes
-      const monthRecurringIncomes = await prisma.income.findMany({
-        where: {
-          userId,
-          isRecurring: true,
-        },
+      let monthRecurringExpense = 0;
+      recurringExpenses.forEach((expense) => {
+        if (expense.date <= chartMonthEnd) {
+          monthRecurringExpense += calculateMonthlyAmount(
+            Number(expense.amount),
+            expense.recurrencePeriod || "MONTHLY",
+          );
+        }
       });
 
-      // Calculate recurring incomes total
-      const monthRecurringIncomeTotal = monthRecurringIncomes.reduce(
-        (total, income) => {
-          // Calculate amount based on recurrence period
-          let periodMultiplier = 1;
+      // Add subscription costs
+      let monthSubscriptionTotal = 0;
+      activeSubscriptions.forEach((sub) => {
+        if (sub.billingCycle === "MONTHLY") {
+          monthSubscriptionTotal += Number(sub.amount);
+        } else if (sub.billingCycle === "YEARLY") {
+          monthSubscriptionTotal += Number(sub.amount) / 12;
+        }
+      });
 
-          if (income.recurrencePeriod === "DAILY") {
-            // Average days in a month
-            periodMultiplier = 30;
-          } else if (income.recurrencePeriod === "WEEKLY") {
-            // Average weeks in a month
-            periodMultiplier = 4.33;
-          } else if (income.recurrencePeriod === "QUARTERLY") {
-            // 1/3 of a quarter per month
-            periodMultiplier = 1 / 3;
-          } else if (income.recurrencePeriod === "YEARLY") {
-            // 1/12 of a year per month
-            periodMultiplier = 1 / 12;
-          }
-          // MONTHLY will use the default multiplier of 1
-
-          return total + Number(income.amount) * periodMultiplier;
-        },
-        0,
-      );
-
-      // Total income for the month (regular + recurring)
       const totalMonthIncome =
-        Number(monthRegularIncome._sum.amount || 0) + monthRecurringIncomeTotal;
-
-      // Calculate month regular expenses
-      const monthRegularExpenses = await prisma.expense.aggregate({
-        where: {
-          userId,
-          date: {
-            gte: chartMonthStart,
-            lte: chartMonthEnd,
-          },
-          isRecurring: false,
-        },
-        _sum: {
-          amount: true,
-        },
-      });
-
-      // Get recurring expenses
-      const monthRecurringExpenses = await prisma.expense.findMany({
-        where: {
-          userId,
-          isRecurring: true,
-        },
-      });
-
-      // Calculate recurring expenses total
-      const monthRecurringTotal = monthRecurringExpenses.reduce(
-        (total, expense) => {
-          // Calculate amount based on recurrence period
-          let periodMultiplier = 1;
-
-          if (expense.recurrencePeriod === "DAILY") {
-            // Average days in a month
-            periodMultiplier = 30;
-          } else if (expense.recurrencePeriod === "WEEKLY") {
-            // Average weeks in a month
-            periodMultiplier = 4.33;
-          } else if (expense.recurrencePeriod === "QUARTERLY") {
-            // 1/3 of a quarter per month
-            periodMultiplier = 1 / 3;
-          } else if (expense.recurrencePeriod === "YEARLY") {
-            // 1/12 of a year per month
-            periodMultiplier = 1 / 12;
-          }
-          // MONTHLY will use the default multiplier of 1
-
-          return total + Number(expense.amount) * periodMultiplier;
-        },
-        0,
-      );
-
-      // Get subscription expenses for this month
-      const monthSubscriptionTotal = await prisma.subscription.aggregate({
-        where: {
-          userId,
-          OR: [
-            // Monthly subscriptions
-            {
-              billingCycle: "MONTHLY",
-              nextPaymentDate: {
-                gte: chartMonthStart,
-                lte: chartMonthEnd,
-              },
-            },
-            // Yearly subscriptions
-            {
-              billingCycle: "YEARLY",
-              nextPaymentDate: {
-                gte: chartMonthStart,
-                lte: chartMonthEnd,
-              },
-            },
-          ],
-        },
-        _sum: {
-          amount: true,
-        },
-      });
-
-      // Total expenses for the month
+        Number(monthRegularIncome._sum.amount || 0) + monthRecurringIncome;
       const totalMonthExpenses =
         Number(monthRegularExpenses._sum.amount || 0) +
-        monthRecurringTotal +
-        Number(monthSubscriptionTotal._sum.amount || 0);
+        monthRecurringExpense +
+        monthSubscriptionTotal;
 
       monthlyData.push({
         month: monthName,
@@ -317,11 +218,19 @@ export async function GET(req: NextRequest) {
     const twoWeeksLater = new Date(today);
     twoWeeksLater.setDate(today.getDate() + 14);
 
+    // Only show payments from 7 days ago to 14 days in the future
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
     // Get upcoming recurring expenses
-    const recurringExpenses = await prisma.expense.findMany({
+    const recurringExpensesForPayments = await prisma.expense.findMany({
       where: {
         userId,
         isRecurring: true,
+        date: {
+          gte: sevenDaysAgo,
+          lte: twoWeeksLater,
+        },
       },
       select: {
         id: true,
@@ -339,7 +248,9 @@ export async function GET(req: NextRequest) {
     const upcomingSubscriptions = await prisma.subscription.findMany({
       where: {
         userId,
+        isActive: true,
         nextPaymentDate: {
+          gte: sevenDaysAgo,
           lte: twoWeeksLater,
         },
       },
@@ -356,7 +267,7 @@ export async function GET(req: NextRequest) {
 
     // Format upcoming payments
     const upcomingPayments = [
-      ...recurringExpenses.map((expense) => ({
+      ...recurringExpensesForPayments.map((expense) => ({
         id: expense.id,
         name: expense.description,
         amount: Number(expense.amount),
@@ -385,9 +296,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch dashboard stats" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

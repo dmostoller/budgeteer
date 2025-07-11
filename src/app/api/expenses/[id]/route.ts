@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireOwnership, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 
 const expenseSchema = z.object({
@@ -26,36 +26,36 @@ const expenseSchema = z.object({
     .nullable(),
 });
 
+const patchExpenseSchema = expenseSchema.partial();
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: expenseId } = await params;
+    const user = await requireOwnership("expense", expenseId);
 
     const expense = await prisma.expense.findUnique({
       where: {
         id: expenseId,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 
     if (!expense) {
-      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+      throw new Error("Resource not found");
     }
 
-    return NextResponse.json(expense);
+    // Convert Decimal to number for client
+    const serializedExpense = {
+      ...expense,
+      amount: expense.amount.toNumber(),
+    };
+
+    return NextResponse.json(serializedExpense);
   } catch (error) {
-    console.error("Error fetching expense:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch expense" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }
 
@@ -64,26 +64,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: expenseId } = await params;
+    await requireOwnership("expense", expenseId);
+
     const body = await req.json();
-    const validatedData = expenseSchema.parse(body);
-
-    // Verify ownership
-    const existingExpense = await prisma.expense.findUnique({
-      where: {
-        id: expenseId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingExpense) {
-      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
-    }
+    const validatedData = patchExpenseSchema.parse(body);
 
     // Update the expense record
     const updatedExpense = await prisma.expense.update({
@@ -93,17 +78,18 @@ export async function PATCH(
       data: validatedData,
     });
 
-    return NextResponse.json(updatedExpense);
+    // Convert Decimal to number for client
+    const serializedExpense = {
+      ...updatedExpense,
+      amount: updatedExpense.amount.toNumber(),
+    };
+
+    return NextResponse.json(serializedExpense);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-
-    console.error("Error updating expense:", error);
-    return NextResponse.json(
-      { error: "Failed to update expense" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }
 
@@ -112,24 +98,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: expenseId } = await params;
-
-    // Verify ownership
-    const existingExpense = await prisma.expense.findUnique({
-      where: {
-        id: expenseId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingExpense) {
-      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
-    }
+    await requireOwnership("expense", expenseId);
 
     // Delete the expense record
     await prisma.expense.delete({
@@ -140,10 +110,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting expense:", error);
-    return NextResponse.json(
-      { error: "Failed to delete expense" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

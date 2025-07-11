@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
-import { startOfMonth, endOfMonth, format, eachMonthOfInterval } from "date-fns";
+import {
+  startOfMonth,
+  endOfMonth,
+  format,
+  eachMonthOfInterval,
+} from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await requireAuth();
 
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get("startDate");
@@ -17,13 +19,13 @@ export async function GET(req: NextRequest) {
     if (!startDate || !endDate) {
       return NextResponse.json(
         { error: "Start date and end date are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const userId = session.user.id;
+    const userId = user.id;
 
     // 1. Income Distribution by Category
     const incomeByCategory = await prisma.income.groupBy({
@@ -180,7 +182,9 @@ export async function GET(req: NextRequest) {
       const monthEnd = endOfMonth(month);
       const monthName = format(month, "MMM yyyy");
 
-      const monthData: { month: string; [key: string]: string | number } = { month: monthName };
+      const monthData: { month: string; [key: string]: string | number } = {
+        month: monthName,
+      };
 
       for (const category of categoryList) {
         const categoryExpenses = await prisma.expense.aggregate({
@@ -259,10 +263,12 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const subscriptionCategoryBreakdown = subscriptionsByCategory.map((cat) => ({
-      category: cat.category,
-      amount: Number(cat._sum.amount || 0),
-    }));
+    const subscriptionCategoryBreakdown = subscriptionsByCategory.map(
+      (cat) => ({
+        category: cat.category,
+        amount: Number(cat._sum.amount || 0),
+      }),
+    );
 
     const subscriptionData = {
       totalMonthly: totalMonthlySubscriptions,
@@ -275,6 +281,64 @@ export async function GET(req: NextRequest) {
       })),
       categoryBreakdown: subscriptionCategoryBreakdown,
     };
+
+    // 6. Expense Distribution by Category
+    const expenseCategories = await prisma.expense.groupBy({
+      by: ["category"],
+      where: {
+        userId,
+        date: {
+          gte: start,
+          lte: end,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Get subscription expenses by category for the date range
+    const subscriptionExpensesByCategory = await prisma.subscription.groupBy({
+      by: ["category"],
+      where: {
+        userId,
+        isActive: true,
+        nextPaymentDate: {
+          gte: start,
+          lte: end,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Combine expense categories and subscriptions
+    const expenseDistributionMap = new Map<string, number>();
+
+    // Add regular expenses
+    expenseCategories.forEach((cat) => {
+      expenseDistributionMap.set(cat.category, Number(cat._sum.amount || 0));
+    });
+
+    // Add subscription expenses
+    subscriptionExpensesByCategory.forEach((cat) => {
+      const existing = expenseDistributionMap.get(cat.category) || 0;
+      expenseDistributionMap.set(
+        cat.category,
+        existing + Number(cat._sum.amount || 0),
+      );
+    });
+
+    // Convert to array and calculate percentages
+    const totalExpenseAmount = Number(totalExpenses._sum.amount || 0);
+    const expenseDistribution = Array.from(expenseDistributionMap.entries())
+      .map(([category, value]) => ({
+        category,
+        value,
+        percent: totalExpenseAmount > 0 ? value / totalExpenseAmount : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
 
     return NextResponse.json({
       incomeDistribution,
@@ -289,12 +353,10 @@ export async function GET(req: NextRequest) {
         data: categoryTrendData,
       },
       subscriptionAnalytics: subscriptionData,
+      expenseDistribution,
     });
   } catch (error) {
     console.error("Error fetching enhanced dashboard stats:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch enhanced dashboard stats" },
-      { status: 500 }
-    );
+    return handleAuthError(error);
   }
 }

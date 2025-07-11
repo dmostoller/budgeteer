@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 
 const subscriptionSchema = z.object({
@@ -13,10 +13,7 @@ const subscriptionSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await requireAuth();
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
@@ -43,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     const subscriptions = await prisma.subscription.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         isActive: true, // Only show active subscriptions
         ...dateFilter,
       },
@@ -54,20 +51,13 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(subscriptions);
   } catch (error) {
-    console.error("Error fetching subscriptions:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch subscriptions" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await requireAuth();
 
     const body = await req.json();
     const validatedData = subscriptionSchema.parse(body);
@@ -76,7 +66,7 @@ export async function POST(req: NextRequest) {
     const subscription = await prisma.subscription.create({
       data: {
         ...validatedData,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 
@@ -86,10 +76,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
 
-    console.error("Error creating subscription:", error);
-    return NextResponse.json(
-      { error: "Failed to create subscription" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

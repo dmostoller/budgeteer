@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { google } from "@ai-sdk/google";
 import { streamText, generateObject } from "ai";
@@ -9,6 +9,7 @@ import {
   RecurrencePeriod,
 } from "@prisma/client";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { checkAIRateLimit } from "@/lib/rate-limit";
 
 // Schema for command detection
 const commandSchema = z.object({
@@ -42,13 +43,16 @@ const commandSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return new Response("Unauthorized", { status: 401 });
+    const user = await requireAuth();
+
+    // Check rate limit
+    const rateLimitResponse = await checkAIRateLimit(user.id);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const { messages } = await req.json();
-    const userId = session.user.id;
+    const userId = user.id;
     const lastMessage = messages[messages.length - 1].content;
 
     // First, detect the intent
@@ -287,6 +291,13 @@ When answering:
     return result.toDataStreamResponse();
   } catch (error) {
     console.error("[AI-CHAT-ERROR]", error);
+
+    // Check if it's an auth error
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return handleAuthError(error);
+    }
+
+    // Handle other errors
     return new Response("Internal Server Error", { status: 500 });
   }
 }

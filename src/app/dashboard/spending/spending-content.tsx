@@ -4,56 +4,55 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ExpenseTable, Expense } from "@/components/tables/expense-table";
+import { ExpenseTable } from "@/components/tables/expense-table";
+import { useExpenses } from "@/hooks/queries/use-expenses";
 
-interface SpendingContentProps {
-  expenses: Expense[];
-}
+export function SpendingContent() {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-export function SpendingContent({ expenses }: SpendingContentProps) {
-  const [pageSize, setPageSize] = useState(20);
+  const {
+    data: response,
+    isLoading,
+    error,
+  } = useExpenses({
+    page,
+    limit: pageSize,
+  });
+
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-red-500">Failed to load expenses</p>
+      </div>
+    );
+  }
+
+  // Transform the data to match ExpenseTable format
+  const tableData = (response?.data || []).map((expense) => ({
+    ...expense,
+    date: new Date(expense.date),
+  }));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Spending</h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label htmlFor="page-size" className="text-sm font-medium">
-              Show
-            </label>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value) => setPageSize(Number(value))}
-            >
-              <SelectTrigger id="page-size" className="w-[100px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="15">15</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm font-medium">entries</span>
-          </div>
-          <Link href="/dashboard/spending/new" passHref>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Add Expense
-            </Button>
-          </Link>
-        </div>
+        <Link href="/dashboard/spending/new" passHref>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Add Expense
+          </Button>
+        </Link>
       </div>
-      <ExpenseTable data={expenses} defaultPageSize={pageSize} />
+      <ExpenseTable
+        data={tableData}
+        totalCount={response?.totalCount || 0}
+        currentPage={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

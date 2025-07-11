@@ -24,7 +24,7 @@ type SubscriptionData = {
   upcomingRenewals: Array<{
     name: string;
     amount: number;
-    date: Date;
+    date: Date | string;
   }>;
   categoryBreakdown: Array<{
     category: string;
