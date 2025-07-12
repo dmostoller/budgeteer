@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireOwnership, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 
 const categorySchema = z.object({
@@ -19,26 +19,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: incomeId } = await params;
+    await requireOwnership("income", incomeId);
+
     const body = await req.json();
     const validatedData = categorySchema.parse(body);
-
-    // Verify ownership
-    const existingIncome = await prisma.income.findUnique({
-      where: {
-        id: incomeId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingIncome) {
-      return NextResponse.json({ error: "Income not found" }, { status: 404 });
-    }
 
     // Update only the category
     const updatedIncome = await prisma.income.update({
@@ -56,10 +41,6 @@ export async function PATCH(
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
 
-    console.error("Error updating income category:", error);
-    return NextResponse.json(
-      { error: "Failed to update income category" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

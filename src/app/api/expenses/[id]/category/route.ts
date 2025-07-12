@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
+import { requireOwnership, handleAuthError } from "@/lib/auth-helpers";
 
 const categorySchema = z.object({
   category: z.enum([
@@ -23,26 +23,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: expenseId } = await params;
+    await requireOwnership("expense", expenseId);
+
     const body = await req.json();
     const validatedData = categorySchema.parse(body);
-
-    // Verify ownership
-    const existingExpense = await prisma.expense.findUnique({
-      where: {
-        id: expenseId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingExpense) {
-      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
-    }
 
     // Update only the category
     const updatedExpense = await prisma.expense.update({
@@ -61,9 +46,6 @@ export async function PATCH(
     }
 
     console.error("Error updating expense category:", error);
-    return NextResponse.json(
-      { error: "Failed to update expense category" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

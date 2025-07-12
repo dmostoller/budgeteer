@@ -1,7 +1,7 @@
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { ExpenseCategory, RecurrencePeriod } from "@prisma/client";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 
 const bulkExpenseSchema = z.object({
   expenses: z.array(
@@ -18,15 +18,12 @@ const bulkExpenseSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return new Response("Unauthorized", { status: 401 });
-    }
+    const user = await requireAuth();
 
     const body = await req.json();
     const { expenses } = bulkExpenseSchema.parse(body);
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Create all expenses in a transaction
     const createdExpenses = await db.$transaction(
@@ -67,6 +64,6 @@ export async function POST(req: Request) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    return new Response("Internal Server Error", { status: 500 });
+    return handleAuthError(error);
   }
 }

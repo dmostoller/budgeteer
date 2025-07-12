@@ -91,7 +91,7 @@ export function CashFlowWaterfallChart({
   const topExpenses = expensesByCategory
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
-  
+
   topExpenses.forEach((expense) => {
     runningTotal -= expense.amount;
     data.push({
@@ -108,7 +108,7 @@ export function CashFlowWaterfallChart({
       .sort((a, b) => b.amount - a.amount)
       .slice(5)
       .reduce((sum, exp) => sum + exp.amount, 0);
-    
+
     if (otherExpenses > 0) {
       runningTotal -= otherExpenses;
       data.push({
@@ -202,4 +202,3 @@ export function CashFlowWaterfallChart({
     </Card>
   );
 }
-

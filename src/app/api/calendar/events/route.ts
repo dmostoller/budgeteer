@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 import { startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await requireAuth();
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
@@ -24,7 +21,7 @@ export async function GET(req: NextRequest) {
     // Fetch data for a 3-month range centered on the target month
     const rangeStart = startOfMonth(subMonths(targetDate, 1));
     const rangeEnd = endOfMonth(addMonths(targetDate, 1));
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Fetch incomes
     const incomes = await prisma.income.findMany({
@@ -93,9 +90,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(events);
   } catch (error) {
     console.error("Error fetching calendar events:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch calendar events" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

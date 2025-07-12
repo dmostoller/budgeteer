@@ -15,6 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { usePrivacy } from "@/contexts/privacy-context";
+import { formatCurrencyWithPrivacy } from "@/lib/utils";
 
 interface SummaryStatsProps {
   totalIncome: number;
@@ -35,11 +37,10 @@ export function SummaryStats({
   incomeChange = 0,
   expensesChange = 0,
 }: SummaryStatsProps) {
+  const { isPrivacyMode } = usePrivacy();
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+    return formatCurrencyWithPrivacy(amount, isPrivacyMode);
   };
 
   // Format date range for display

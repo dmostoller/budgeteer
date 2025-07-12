@@ -1,4 +1,3 @@
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { google } from "@ai-sdk/google";
 import { generateObject } from "ai";
@@ -9,6 +8,8 @@ import {
   mergeBatchResults,
   type BatchResult,
 } from "@/lib/bank-statement-utils";
+import { checkAIRateLimit } from "@/lib/rate-limit";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 
 // Schema for parsed transactions
 const transactionSchema = z.object({
@@ -36,9 +37,12 @@ const analyzedStatementSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return new Response("Unauthorized", { status: 401 });
+    const user = await requireAuth();
+
+    // Check rate limit
+    const rateLimitResponse = await checkAIRateLimit(user.id);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const formData = await req.formData();
@@ -90,7 +94,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Get existing transactions to help with duplicate detection
     const existingTransactions = await db.$transaction([
@@ -271,6 +275,9 @@ Important:
       },
     );
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return handleAuthError(error);
+    }
     console.error("[AI-ANALYZE-STATEMENT-ERROR]", error);
 
     // Provide more specific error messages

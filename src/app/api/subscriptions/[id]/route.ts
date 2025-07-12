@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireOwnership, handleAuthError } from "@/lib/auth-helpers";
 import prisma from "@/lib/db";
 
 const subscriptionSchema = z.object({
@@ -16,17 +16,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: subscriptionId } = await params;
+    await requireOwnership("subscription", subscriptionId);
 
     const subscription = await prisma.subscription.findUnique({
       where: {
         id: subscriptionId,
-        userId: session.user.id,
       },
     });
 
@@ -39,11 +34,7 @@ export async function GET(
 
     return NextResponse.json(subscription);
   } catch (error) {
-    console.error("Error fetching subscription:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch subscription" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }
 
@@ -52,29 +43,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: subscriptionId } = await params;
+    await requireOwnership("subscription", subscriptionId);
+
     const body = await req.json();
     const validatedData = subscriptionSchema.parse(body);
-
-    // Verify ownership
-    const existingSubscription = await prisma.subscription.findUnique({
-      where: {
-        id: subscriptionId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingSubscription) {
-      return NextResponse.json(
-        { error: "Subscription not found" },
-        { status: 404 },
-      );
-    }
 
     // Update the subscription record
     const updatedSubscription = await prisma.subscription.update({
@@ -90,11 +63,7 @@ export async function PATCH(
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
 
-    console.error("Error updating subscription:", error);
-    return NextResponse.json(
-      { error: "Failed to update subscription" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }
 
@@ -103,27 +72,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: subscriptionId } = await params;
-
-    // Verify ownership
-    const existingSubscription = await prisma.subscription.findUnique({
-      where: {
-        id: subscriptionId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!existingSubscription) {
-      return NextResponse.json(
-        { error: "Subscription not found" },
-        { status: 404 },
-      );
-    }
+    await requireOwnership("subscription", subscriptionId);
 
     // Delete the subscription record
     await prisma.subscription.delete({
@@ -134,10 +84,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting subscription:", error);
-    return NextResponse.json(
-      { error: "Failed to delete subscription" },
-      { status: 500 },
-    );
+    return handleAuthError(error);
   }
 }

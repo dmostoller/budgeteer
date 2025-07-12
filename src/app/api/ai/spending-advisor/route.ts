@@ -1,18 +1,22 @@
-import { auth } from "@/lib/auth";
+import { requireAuth, handleAuthError } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
+import { checkAIRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
     // Verify authentication
-    const session = await auth();
-    if (!session?.user) {
-      return new Response("Unauthorized", { status: 401 });
+    const user = await requireAuth();
+
+    // Check rate limit
+    const rateLimitResponse = await checkAIRateLimit(user.id);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const { messages } = await req.json();
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Fetch user financial data
     const [expenses, incomes, subscriptions] = await Promise.all([
@@ -126,6 +130,13 @@ Now provide a helpful response that:
     return result.toDataStreamResponse();
   } catch (error) {
     console.error("[AI-SPENDING-ADVISOR-ERROR]", error);
+
+    // Check if it's an auth error
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return handleAuthError(error);
+    }
+
+    // Handle other errors
     return new Response("Internal Server Error", { status: 500 });
   }
 }
